@@ -29,7 +29,8 @@ const navigate = (canvas: Canvas, direction: string) => {
 	const viewportNodes = canvas.getViewportNodes();
 	const {x, y, width, height} = selectedItem;
 
-	canvas.deselectAll();
+	// commented the like below to keep the last node selected
+	// canvas.deselectAll();
 
 	const isVertical = direction === "top" || direction === "bottom";
 	const comparePrimary = isVertical ? (a: CanvasNode, b: CanvasNode) => a.y - b.y : (a: CanvasNode, b: CanvasNode) => a.x - b.x;
@@ -45,6 +46,7 @@ const navigate = (canvas: Canvas, direction: string) => {
 	const filteredNodes = viewportNodes.filter(filterCondition);
 	const sortedNodes = filteredNodes.length > 0 ? filteredNodes.sort(comparePrimary) : viewportNodes.filter((node: CanvasNode) => direction === "top" ? node.y < y : direction === "bottom" ? node.y > y : direction === "left" ? node.x < x : node.x > x).sort(compareSecondary);
 	const nextNode = sortedNodes[0];
+
 
 	if (nextNode) {
 		canvas.selectOnly(nextNode);
@@ -397,19 +399,41 @@ export default class CanvasMindMap extends Plugin {
 						}
 
 						if (self.settings.navigate.useNavigate) {
-							this.scope.register(["Alt"], "ArrowUp", () => {
+							// this.scope.register(["Alt"], "ArrowUp", () => {
+							// 	navigate(this.canvas, "top");
+							// });
+							// this.scope.register(["Alt"], "ArrowDown", () => {
+							// 	navigate(this.canvas, "bottom");
+							// });
+							// this.scope.register(["Alt"], "ArrowLeft", () => {
+							// 	navigate(this.canvas, "left");
+							// });
+							// this.scope.register(["Alt"], "ArrowRight", () => {
+							// 	navigate(this.canvas, "right");
+							// });
+							this.scope.register(["Alt"], "k", () => {
 								navigate(this.canvas, "top");
 							});
-							this.scope.register(["Alt"], "ArrowDown", () => {
+							this.scope.register(["Alt"], "j", () => {
 								navigate(this.canvas, "bottom");
 							});
-							this.scope.register(["Alt"], "ArrowLeft", () => {
+							this.scope.register(["Alt"], "h", () => {
 								navigate(this.canvas, "left");
 							});
-							this.scope.register(["Alt"], "ArrowRight", () => {
+							this.scope.register(["Alt"], "l", () => {
 								navigate(this.canvas, "right");
 							});
 						}
+
+						// TODO use HJKL to move nodes
+						// this.scope.register([], "k", async (ev: KeyboardEvent) => {
+						// 	const selection = this.canvas.selection;
+						// 	if (selection.size !== 1) return;
+						// 	const node = selection.entries().next().value[1];
+						// 	if (node?.label || node?.url) return;
+						// 	node.y -= 20;
+						// 	node.render();
+						// });
 
 						this.scope.register([], "Enter", async () => {
 							const node = await createSiblingNode(this.canvas, false);
@@ -446,6 +470,17 @@ export default class CanvasMindMap extends Plugin {
 
 						});
 
+						// add shift S to multiply the node height
+						this.scope.register(['Shift'], 'S', async (ev: KeyboardEvent) => {
+							const selection = this.canvas.selection;
+							if (selection.size !== 1) return;
+							const node = selection.entries().next().value[1];
+							if (node?.label || node?.url) return;
+							if (node.isEditing) return;
+							node.height *= 2;
+							node.render();
+						});
+
 						// add R key to focus on last node 
 						this.scope.register([], "r", async (ev: KeyboardEvent) => {
 							const selection = this.canvas.selection;
@@ -455,6 +490,16 @@ export default class CanvasMindMap extends Plugin {
 								return
 							}
 						})
+
+						// add HJKL to move between nodes
+						this.scope.register([], 'h', async (ev: KeyboardEvent) => {
+							const selection = this.canvas.selection;
+							if (selection.size !== 1) return;
+							const node = selection.entries().next().value[1];
+							if (node?.label || node?.url) return;
+							if (node.isEditing) return;
+
+						});
 
 						return next.call(this);
 					}
