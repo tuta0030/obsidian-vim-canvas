@@ -471,6 +471,8 @@ export default class CanvasMindMap extends Plugin {
 						});
 
 						// add shift S to multiply the node height
+						// TODO make S to scale back
+						// TODO after rendering cant drag node bottom edge to resize, need to fix this
 						this.scope.register(['Shift'], 'S', async (ev: KeyboardEvent) => {
 							const selection = this.canvas.selection;
 							if (selection.size !== 1) return;
