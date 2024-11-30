@@ -446,6 +446,16 @@ export default class CanvasMindMap extends Plugin {
 
 						});
 
+						// add R key to focus on last node 
+						this.scope.register([], "r", async (ev: KeyboardEvent) => {
+							const selection = this.canvas.selection;
+							if (selection.size == 0) {
+								let firstNode = this.canvas.getViewportNodes().first();
+								this.canvas.select(firstNode);
+								return
+							}
+						})
+
 						return next.call(this);
 					}
 			});
