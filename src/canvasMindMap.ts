@@ -411,29 +411,20 @@ export default class CanvasMindMap extends Plugin {
 							// this.scope.register(["Alt"], "ArrowRight", () => {
 							// 	navigate(this.canvas, "right");
 							// });
-							this.scope.register(["Alt"], "k", () => {
+							this.scope.register([], "k", () => {
 								navigate(this.canvas, "top");
 							});
-							this.scope.register(["Alt"], "j", () => {
+							this.scope.register([], "j", () => {
 								navigate(this.canvas, "bottom");
 							});
-							this.scope.register(["Alt"], "h", () => {
+							this.scope.register([], "h", () => {
 								navigate(this.canvas, "left");
 							});
-							this.scope.register(["Alt"], "l", () => {
+							this.scope.register([], "l", () => {
 								navigate(this.canvas, "right");
 							});
 						}
 
-						// TODO use HJKL to move nodes
-						// this.scope.register([], "k", async (ev: KeyboardEvent) => {
-						// 	const selection = this.canvas.selection;
-						// 	if (selection.size !== 1) return;
-						// 	const node = selection.entries().next().value[1];
-						// 	if (node?.label || node?.url) return;
-						// 	node.y -= 20;
-						// 	node.render();
-						// });
 
 						this.scope.register([], "Enter", async () => {
 							const node = await createSiblingNode(this.canvas, false);
@@ -458,21 +449,32 @@ export default class CanvasMindMap extends Plugin {
 							}, 0);
 						});
 
-						this.scope.register([], 'Space', async (ev: KeyboardEvent) => {
-							const selection = this.canvas.selection;
-							if (selection.size !== 1) return;
-							const node = selection.entries().next().value[1];
+						// use ctrl enter to edit node, perventing vim mode issue when editing node
+						this.scope.register(["Ctrl"], 'Enter', async (ev: KeyboardEvent) => {
+							let node = app.workspace.activeLeaf.view.canvas.selection.values().next().value;
+							let vimState = app.isVimEnabled();
+							// console.log("vimState", vimState);
 
-							if (node?.label || node?.url) return;
-
-							if (node.isEditing) return;
-							node.startEditing();
-
+							if (vimState) {
+								app.vault.setConfig("vimMode", false);
+								node.startEditing();
+								app.vault.setConfig("vimMode", true);
+								
+							}
+							else {
+								node.startEditing();
+								app.vault.setConfig("vimMode", true);
+							}
 						});
 
-						// add shift S to multiply the node height
-						// TODO make S to scale back
+						// use shift Z to zoom out
+						this.scope.register(['Shift'], 'Z', async (ev: KeyboardEvent) => {
+							this.canvas.zoomBy(-1);
+						});
+
 						// TODO after rendering cant drag node bottom edge to resize, need to fix this
+						// TODO after rendering connected lines are no longer properly connected
+						// add shift S to multiply the node height
 						this.scope.register(['Shift'], 'S', async (ev: KeyboardEvent) => {
 							const selection = this.canvas.selection;
 							if (selection.size !== 1) return;
@@ -482,26 +484,26 @@ export default class CanvasMindMap extends Plugin {
 							node.height *= 2;
 							node.render();
 						});
-
-						// add R key to focus on last node 
-						this.scope.register([], "r", async (ev: KeyboardEvent) => {
-							const selection = this.canvas.selection;
-							if (selection.size == 0) {
-								let firstNode = this.canvas.getViewportNodes().first();
-								this.canvas.select(firstNode);
-								return
-							}
-						})
-
-						// add HJKL to move between nodes
-						this.scope.register([], 'h', async (ev: KeyboardEvent) => {
+						// add ctrl S to scale back
+						this.scope.register(['Ctrl'], 'S', async (ev: KeyboardEvent) => {
 							const selection = this.canvas.selection;
 							if (selection.size !== 1) return;
 							const node = selection.entries().next().value[1];
 							if (node?.label || node?.url) return;
 							if (node.isEditing) return;
-
+							node.height *= 1/2;
+							node.render();
 						});
+
+						// add R key to focus on a node in viewport
+						this.scope.register([], "r", async (ev: KeyboardEvent) => {
+							const selection = this.canvas.selection;
+							if (selection.size == 0) {
+								let lastNode = this.canvas.getViewportNodes().last();
+								this.canvas.select(lastNode);
+								// app.vault.setConfig("vimMode", false);
+							}
+						})
 
 						return next.call(this);
 					}
