@@ -29,7 +29,7 @@ const navigate = (canvas: Canvas, direction: string) => {
 	const viewportNodes = canvas.getViewportNodes();
 	const {x, y, width, height} = selectedItem;
 
-	// commented the like below to keep the last node selected
+	// remove deselectAll to keep the last node selected
 	// canvas.deselectAll();
 
 	const isVertical = direction === "top" || direction === "bottom";
@@ -425,6 +425,32 @@ export default class CanvasMindMap extends Plugin {
 							});
 						}
 
+						// use alt HJKL to move node
+						this.scope.register(["Alt"], "h", () => {
+							let node = app.workspace.activeLeaf.view.canvas.selection.values().next().value;
+							node.x -= 10;
+							node.render();
+							node.moveTo(node);
+						});
+						this.scope.register(["Alt"], "j", () => {
+							let node = app.workspace.activeLeaf.view.canvas.selection.values().next().value;
+							node.y += 10;
+							node.render();
+							node.moveTo(node);
+						});
+						this.scope.register(["Alt"], "k", () => {
+							let node = app.workspace.activeLeaf.view.canvas.selection.values().next().value;
+							node.y -= 10;
+							node.render();
+							node.moveTo(node);
+						});
+						this.scope.register(["Alt"], "l", () => {
+							let node = app.workspace.activeLeaf.view.canvas.selection.values().next().value;
+							node.x += 10;
+							node.render();
+							node.moveTo(node);
+						});
+
 
 						this.scope.register([], "Enter", async () => {
 							const node = await createSiblingNode(this.canvas, false);
@@ -472,8 +498,6 @@ export default class CanvasMindMap extends Plugin {
 							this.canvas.zoomBy(-1);
 						});
 
-						// TODO after rendering cant drag node bottom edge to resize, need to fix this
-						// TODO after rendering connected lines are no longer properly connected
 						// add shift S to multiply the node height
 						this.scope.register(['Shift'], 'S', async (ev: KeyboardEvent) => {
 							const selection = this.canvas.selection;
@@ -483,6 +507,7 @@ export default class CanvasMindMap extends Plugin {
 							if (node.isEditing) return;
 							node.height *= 2;
 							node.render();
+							node.moveTo(node);
 						});
 						// add ctrl S to scale back
 						this.scope.register(['Ctrl'], 'S', async (ev: KeyboardEvent) => {
@@ -493,6 +518,7 @@ export default class CanvasMindMap extends Plugin {
 							if (node.isEditing) return;
 							node.height *= 1/2;
 							node.render();
+							node.moveTo(node);
 						});
 
 						// add R key to focus on a node in viewport
