@@ -19,7 +19,11 @@
 
 - Press `Enter` to create brother card; (You can change this hotkey in setting)
 - Press `Tab` to create child card;
-- Press `Alt` + `←/→/↓/↑` to navigate between nodes;
+- Press `HJKL` to move between nodes;
+- Press `Alt` + `HJKL` to move nodes around;
+- Press `Shift` + `s` to scale node up;
+- Press `Ctrl` + `s` to scale node down;
+- Press `Shift` + `z` to zoom out canvas;
 - Press `Cmd / Ctrl` + `←/→/↓/↑` to create floating nodes;
 - Press `Cmd / Ctrl` + `Shift` + `←/→/↓/↑` to create child nodes;
 

@@ -1,21 +1,43 @@
-import { Canvas, CanvasEdge, CanvasNode, ItemView, Plugin, requireApiVersion, SettingTab, TFile } from 'obsidian';
+import {
+	Canvas,
+	CanvasEdge,
+	CanvasNode,
+	ItemView,
+	Plugin,
+	requireApiVersion,
+	SettingTab,
+	TFile,
+} from "obsidian";
 import { around } from "monkey-around";
-import { addEdge, addNode, buildTrees, createChildFileNode, random } from "./utils";
-import { DEFAULT_SETTINGS, MindMapSettings, MindMapSettingTab } from "./mindMapSettings";
+import {
+	addEdge,
+	addNode,
+	buildTrees,
+	createChildFileNode,
+	random,
+} from "./utils";
+import {
+	DEFAULT_SETTINGS,
+	MindMapSettings,
+	MindMapSettingTab,
+} from "./mindMapSettings";
 import { CanvasEdgeData } from "obsidian/canvas";
 
 const createEdge = async (node1: any, node2: any, canvas: any) => {
-
-	addEdge(canvas, random(16), {
-		fromOrTo: "from",
-		side: "right",
-		node: node1
-	}, {
-		fromOrTo: "to",
-		side: "left",
-		node: node2
-	});
-
+	addEdge(
+		canvas,
+		random(16),
+		{
+			fromOrTo: "from",
+			side: "right",
+			node: node1,
+		},
+		{
+			fromOrTo: "to",
+			side: "left",
+			node: node2,
+		}
+	);
 };
 
 const navigate = (canvas: Canvas, direction: string) => {
@@ -27,26 +49,55 @@ const navigate = (canvas: Canvas, direction: string) => {
 
 	const selectedItem = currentSelection.values().next().value as CanvasNode;
 	const viewportNodes = canvas.getViewportNodes();
-	const {x, y, width, height} = selectedItem;
+	const { x, y, width, height } = selectedItem;
 
 	// remove deselectAll to keep the last node selected
 	// canvas.deselectAll();
 
 	const isVertical = direction === "top" || direction === "bottom";
-	const comparePrimary = isVertical ? (a: CanvasNode, b: CanvasNode) => a.y - b.y : (a: CanvasNode, b: CanvasNode) => a.x - b.x;
-	const compareSecondary = isVertical ? (a: CanvasNode, b: CanvasNode) => a.x - b.x : (a: CanvasNode, b: CanvasNode) => a.y - b.y;
+	const comparePrimary = isVertical
+		? (a: CanvasNode, b: CanvasNode) => a.y - b.y
+		: (a: CanvasNode, b: CanvasNode) => a.x - b.x;
+	const compareSecondary = isVertical
+		? (a: CanvasNode, b: CanvasNode) => a.x - b.x
+		: (a: CanvasNode, b: CanvasNode) => a.y - b.y;
 	const filterCondition = (node: CanvasNode) => {
 		const inRange = isVertical
 			? node.x < x + width / 2 && node.x + node.width > x + width / 2
 			: node.y < y + height / 2 && node.y + node.height > y + height / 2;
-		const directionCondition = direction === "top" ? node.y < y : direction === "bottom" ? node.y > y : direction === "left" ? node.x < x : node.x > x;
+		const directionCondition =
+			direction === "top"
+				? node.y < y
+				: direction === "bottom"
+				? node.y > y
+				: direction === "left"
+				? node.x < x
+				: node.x > x;
 		return inRange && directionCondition;
 	};
 
+	// TODO fix left movement
+	const verticalThreashold = 50;
 	const filteredNodes = viewportNodes.filter(filterCondition);
-	const sortedNodes = filteredNodes.length > 0 ? filteredNodes.sort(comparePrimary) : viewportNodes.filter((node: CanvasNode) => direction === "top" ? node.y < y : direction === "bottom" ? node.y > y : direction === "left" ? node.x < x : node.x > x).sort(compareSecondary);
-	const nextNode = sortedNodes[0];
+	const sortedNodes =
+		filteredNodes.length > 0
+			? filteredNodes.sort(comparePrimary)
+			: viewportNodes
+					.filter((node: CanvasNode) => {
+						if (direction === "top") return node.y < y;
+						if (direction === "bottom") return node.y > y;
+						if (direction === "left")
+							return (
+								(y - verticalThreashold < node.y &&
+									node.y < y + verticalThreashold) ||
+								node.x < x
+							);
+						if (direction === "right") return node.x > x;
+						return false;
+					})
+					.sort(compareSecondary);
 
+	const nextNode = sortedNodes[0];
 
 	if (nextNode) {
 		canvas.selectOnly(nextNode);
@@ -64,20 +115,27 @@ const createFloatingNode = (canvas: any, direction: string) => {
 	if (selection.values().next().value.isEditing) return;
 
 	let node = selection.values().next().value;
-	let x = direction === "left" ? node.x - node.width - 50 : direction === "right" ? node.x + node.width + 50 : node.x;
-	let y = direction === "top" ? node.y - node.height - 100 : direction === "bottom" ? node.y + node.height + 100 : node.y;
+	let x =
+		direction === "left"
+			? node.x - node.width - 50
+			: direction === "right"
+			? node.x + node.width + 50
+			: node.x;
+	let y =
+		direction === "top"
+			? node.y - node.height - 100
+			: direction === "bottom"
+			? node.y + node.height + 100
+			: node.y;
 
-
-	const tempChildNode = addNode(
-		canvas, random(16), {
-			x: x,
-			y: y,
-			width: node.width,
-			height: node.height,
-			type: 'text',
-			content: "",
-		}
-	);
+	const tempChildNode = addNode(canvas, random(16), {
+		x: x,
+		y: y,
+		width: node.width,
+		height: node.height,
+		type: "text",
+		content: "",
+	});
 
 	canvas?.requestSave();
 
@@ -95,16 +153,14 @@ const createFloatingNode = (canvas: any, direction: string) => {
 };
 
 const childNode = async (canvas: Canvas, parentNode: CanvasNode, y: number) => {
-	let tempChildNode = addNode(
-		canvas, random(16), {
-			x: parentNode.x + parentNode.width + 200,
-			y: y,
-			width: parentNode.width,
-			height: parentNode.height,
-			type: 'text',
-			content: "",
-		}
-	);
+	let tempChildNode = addNode(canvas, random(16), {
+		x: parentNode.x + parentNode.width + 200,
+		y: y,
+		width: parentNode.width,
+		height: parentNode.height,
+		type: "text",
+		content: "",
+	});
 	await createEdge(parentNode, tempChildNode, canvas);
 
 	canvas.deselectAll();
@@ -129,7 +185,7 @@ const createChildNode = async (canvas: Canvas, ignored: boolean) => {
 	const canvasData = canvas.getData();
 
 	const prevParentEdges = canvasData.edges.filter((item: CanvasEdgeData) => {
-		return (item.fromNode === parentNode.id && item.toSide === "left");
+		return item.fromNode === parentNode.id && item.toSide === "left";
 	});
 
 	if (prevParentEdges.length === 0) {
@@ -139,22 +195,26 @@ const createChildNode = async (canvas: Canvas, ignored: boolean) => {
 	}
 
 	return tempChildNode;
-
 };
 
-const siblingNode = async (canvas: Canvas, parentNode: CanvasNode, prevParentEdges: CanvasEdgeData[]) => {
-	const allEdges = canvas.getEdgesForNode(parentNode).filter((item: CanvasEdge) => {
-		return prevParentEdges.some((edge: CanvasEdgeData) => {
-			return item.to.node.id === edge.toNode;
+const siblingNode = async (
+	canvas: Canvas,
+	parentNode: CanvasNode,
+	prevParentEdges: CanvasEdgeData[]
+) => {
+	const allEdges = canvas
+		.getEdgesForNode(parentNode)
+		.filter((item: CanvasEdge) => {
+			return prevParentEdges.some((edge: CanvasEdgeData) => {
+				return item.to.node.id === edge.toNode;
+			});
 		});
-	});
 
 	const allNodes = allEdges.map((edge: CanvasEdge) => edge.to.node);
 	allNodes.sort((a, b) => a.y - b.y);
 	const lastNode = allNodes[allNodes.length - 1];
 	canvas.selectOnly(lastNode);
 	return await createSiblingNode(canvas, false);
-
 };
 
 const createSiblingNode = async (canvas: Canvas, ignored: boolean) => {
@@ -163,25 +223,38 @@ const createSiblingNode = async (canvas: Canvas, ignored: boolean) => {
 
 	if (selectedNode.isEditing && !ignored) return;
 
-	const incomingEdges = canvas.getEdgesForNode(selectedNode).filter((edge: CanvasEdge) => edge.to.node.id === selectedNode.id);
+	const incomingEdges = canvas
+		.getEdgesForNode(selectedNode)
+		.filter((edge: CanvasEdge) => edge.to.node.id === selectedNode.id);
 	if (incomingEdges.length === 0) return;
 	const parentNode = incomingEdges[0].from.node;
 
 	const newYPosition = selectedNode.y + selectedNode.height / 2 + 110;
 	const newChildNode = await childNode(canvas, parentNode, newYPosition);
 
-	const leftSideEdges = canvas.getEdgesForNode(parentNode).filter((edge: CanvasEdge) => edge.from.node.id === parentNode.id && edge.to.side === "left");
+	const leftSideEdges = canvas
+		.getEdgesForNode(parentNode)
+		.filter(
+			(edge: CanvasEdge) =>
+				edge.from.node.id === parentNode.id && edge.to.side === "left"
+		);
 
 	let nodes = leftSideEdges.map((edge: CanvasEdge) => edge.to.node);
-	let totalHeight = nodes.reduce((acc: number, node: CanvasNode) => acc + node.height + 20, 0);
+	let totalHeight = nodes.reduce(
+		(acc: number, node: CanvasNode) => acc + node.height + 20,
+		0
+	);
 
 	nodes.sort((a, b) => a.y - b.y);
 
 	if (nodes.length <= 1) return;
 	if (nodes.length > 1 && nodes[0].x === nodes[1]?.x) {
 		nodes.forEach((node: CanvasNode, index: number) => {
-			const yPos = index === 0 ? parentNode.y + parentNode.height / 2 - totalHeight / 2 : nodes[index - 1].y + nodes[index - 1].height + 20;
-			node.moveTo({x: selectedNode.x, y: yPos});
+			const yPos =
+				index === 0
+					? parentNode.y + parentNode.height / 2 - totalHeight / 2
+					: nodes[index - 1].y + nodes[index - 1].height + 20;
+			node.moveTo({ x: selectedNode.x, y: yPos });
 		});
 	}
 
@@ -189,11 +262,9 @@ const createSiblingNode = async (canvas: Canvas, ignored: boolean) => {
 	return newChildNode;
 };
 
-
 export default class CanvasMindMap extends Plugin {
 	settings: MindMapSettings;
 	settingTab: MindMapSettingTab;
-
 
 	async onload() {
 		await this.registerSettings();
@@ -203,9 +274,7 @@ export default class CanvasMindMap extends Plugin {
 		this.patchCanvasNode();
 	}
 
-	onunload() {
-
-	}
+	onunload() {}
 
 	async registerSettings() {
 		this.settingTab = new MindMapSettingTab(this.app, this);
@@ -215,8 +284,8 @@ export default class CanvasMindMap extends Plugin {
 
 	registerCommands() {
 		this.addCommand({
-			id: 'split-heading-into-mindmap',
-			name: 'Split Heading into mindmap based on H1',
+			id: "split-heading-into-mindmap",
+			name: "Split Heading into mindmap based on H1",
 			checkCallback: (checking: boolean) => {
 				// Conditions to check
 				const canvasView = app.workspace.getActiveViewOfType(ItemView);
@@ -232,37 +301,62 @@ export default class CanvasMindMap extends Plugin {
 							return;
 						}
 
-						const currentSelectionItem = currentSelection.values().next().value;
+						const currentSelectionItem = currentSelection
+							.values()
+							.next().value;
 						if (!currentSelectionItem.filePath) return;
 
-						const currentSelectionItemFile = currentSelectionItem.file as TFile;
-						if (!(currentSelectionItemFile.extension === "md")) return;
+						const currentSelectionItemFile =
+							currentSelectionItem.file as TFile;
+						if (!(currentSelectionItemFile.extension === "md"))
+							return;
 
-						const currentFileHeadings = app.metadataCache.getFileCache(currentSelectionItemFile)?.headings;
+						const currentFileHeadings =
+							app.metadataCache.getFileCache(
+								currentSelectionItemFile
+							)?.headings;
 						if (!currentFileHeadings) return;
 
-						const currentFileHeadingH1 = currentFileHeadings.filter(heading => heading.level === 1);
+						const currentFileHeadingH1 = currentFileHeadings.filter(
+							(heading) => heading.level === 1
+						);
 						if (currentFileHeadingH1.length === 0) return;
 
-						const nodeGroupHeight = (currentSelectionItem.height * 0.6 + 20) * currentFileHeadingH1.length;
+						const nodeGroupHeight =
+							(currentSelectionItem.height * 0.6 + 20) *
+							currentFileHeadingH1.length;
 						let direction = -1;
-						const nodeGroupY = currentSelectionItem.y + currentSelectionItem.height / 2 + (nodeGroupHeight / 2) * direction;
+						const nodeGroupY =
+							currentSelectionItem.y +
+							currentSelectionItem.height / 2 +
+							(nodeGroupHeight / 2) * direction;
 
 						currentFileHeadingH1.forEach((item, index) => {
-							createChildFileNode(canvas, currentSelectionItem, currentSelectionItemFile, "#" + item.heading, nodeGroupY - direction * (currentSelectionItem.height * 0.6 + 20) * index);
+							createChildFileNode(
+								canvas,
+								currentSelectionItem,
+								currentSelectionItemFile,
+								"#" + item.heading,
+								nodeGroupY -
+									direction *
+										(currentSelectionItem.height * 0.6 +
+											20) *
+										index
+							);
 						});
 					}
 					return true;
 				}
-			}
+			},
 		});
 
 		this.addCommand({
-			id: 'create-floating-node',
-			name: 'Create floating node',
+			id: "create-floating-node",
+			name: "Create floating node",
 			checkCallback: (checking: boolean) => {
 				// Conditions to check
-				const canvasView = this.app.workspace.getActiveViewOfType(ItemView);
+				const canvasView =
+					this.app.workspace.getActiveViewOfType(ItemView);
 				if (canvasView?.getViewType() === "canvas") {
 					// If checking is true, we're simply "checking" if the command can be run.
 					// If checking is false, then we want to actually perform the operation.
@@ -275,13 +369,13 @@ export default class CanvasMindMap extends Plugin {
 								x: 0,
 								y: 0,
 								height: 500,
-								width: 400
+								width: 400,
 							},
 							size: {
 								x: 0,
 								y: 0,
 								height: 500,
-								width: 400
+								width: 400,
 							},
 							text: "",
 							focus: true,
@@ -301,15 +395,16 @@ export default class CanvasMindMap extends Plugin {
 					// This command will only show up in Command Palette when the check function returns true
 					return true;
 				}
-			}
+			},
 		});
 
 		this.addCommand({
-			id: 'create-child-node',
-			name: 'Create child node',
+			id: "create-child-node",
+			name: "Create child node",
 			checkCallback: (checking: boolean) => {
 				const view = this.app.workspace.getActiveViewOfType(ItemView);
-				const canvasView = this.app.workspace.getActiveViewOfType(ItemView);
+				const canvasView =
+					this.app.workspace.getActiveViewOfType(ItemView);
 				if (canvasView?.getViewType() === "canvas") {
 					if (!checking) {
 						// @ts-ignore
@@ -325,21 +420,20 @@ export default class CanvasMindMap extends Plugin {
 								realNode?.startEditing();
 							}, 0);
 						});
-
-
 					}
 
 					return true;
 				}
-			}
+			},
 		});
 
 		this.addCommand({
-			id: 'create-sibling-node',
-			name: 'Create sibling node',
+			id: "create-sibling-node",
+			name: "Create sibling node",
 			checkCallback: (checking: boolean) => {
 				const view = this.app.workspace.getActiveViewOfType(ItemView);
-				const canvasView = this.app.workspace.getActiveViewOfType(ItemView);
+				const canvasView =
+					this.app.workspace.getActiveViewOfType(ItemView);
 				if (canvasView?.getViewType() === "canvas") {
 					if (!checking) {
 						// @ts-ignore
@@ -356,184 +450,245 @@ export default class CanvasMindMap extends Plugin {
 								realNode?.startEditing();
 							}, 0);
 						});
-
-
 					}
 
 					return true;
 				}
-			}
+			},
 		});
 	}
 
 	patchCanvas() {
-
-
 		const patchCanvas = () => {
-
 			const self = this;
 
-			const canvasView = this.app.workspace.getLeavesOfType("canvas").first()?.view;
+			const canvasView = this.app.workspace
+				.getLeavesOfType("canvas")
+				.first()?.view;
 			// @ts-ignore
 			const canvas = canvasView?.canvas;
 
 			if (!canvasView) return false;
 			const patchCanvasView = canvas.constructor;
 
-			const canvasViewunistaller = around(canvasView.constructor.prototype, {
-				onOpen: (next) =>
-					async function () {
-						if (self.settings.create.createFloat) {
-							this.scope.register(["Mod"], "ArrowUp", () => {
-								createFloatingNode(this.canvas, "top");
-							});
-							this.scope.register(["Mod"], "ArrowDown", () => {
-								createFloatingNode(this.canvas, "bottom");
-							});
-							this.scope.register(["Mod"], "ArrowLeft", () => {
-								createFloatingNode(this.canvas, "left");
-							});
-							this.scope.register(["Mod"], "ArrowRight", () => {
-								createFloatingNode(this.canvas, "right");
-							});
-						}
-
-						if (self.settings.navigate.useNavigate) {
-							// this.scope.register(["Alt"], "ArrowUp", () => {
-							// 	navigate(this.canvas, "top");
-							// });
-							// this.scope.register(["Alt"], "ArrowDown", () => {
-							// 	navigate(this.canvas, "bottom");
-							// });
-							// this.scope.register(["Alt"], "ArrowLeft", () => {
-							// 	navigate(this.canvas, "left");
-							// });
-							// this.scope.register(["Alt"], "ArrowRight", () => {
-							// 	navigate(this.canvas, "right");
-							// });
-							this.scope.register([], "k", () => {
-								navigate(this.canvas, "top");
-							});
-							this.scope.register([], "j", () => {
-								navigate(this.canvas, "bottom");
-							});
-							this.scope.register([], "h", () => {
-								navigate(this.canvas, "left");
-							});
-							this.scope.register([], "l", () => {
-								navigate(this.canvas, "right");
-							});
-						}
-
-						// use alt HJKL to move node
-						this.scope.register(["Alt"], "h", () => {
-							let node = app.workspace.activeLeaf.view.canvas.selection.values().next().value;
-							node.x -= 10;
-							node.render();
-							node.moveTo(node);
-						});
-						this.scope.register(["Alt"], "j", () => {
-							let node = app.workspace.activeLeaf.view.canvas.selection.values().next().value;
-							node.y += 10;
-							node.render();
-							node.moveTo(node);
-						});
-						this.scope.register(["Alt"], "k", () => {
-							let node = app.workspace.activeLeaf.view.canvas.selection.values().next().value;
-							node.y -= 10;
-							node.render();
-							node.moveTo(node);
-						});
-						this.scope.register(["Alt"], "l", () => {
-							let node = app.workspace.activeLeaf.view.canvas.selection.values().next().value;
-							node.x += 10;
-							node.render();
-							node.moveTo(node);
-						});
-
-
-						this.scope.register([], "Enter", async () => {
-							const node = await createSiblingNode(this.canvas, false);
-							if (!node) return;
-
-							setTimeout(() => {
-								const realNode = this.canvas.nodes?.get(node.id);
-								realNode?.startEditing();
-								this.canvas.zoomToSelection();
-							}, 0);
-						});
-
-						this.scope.register([], "Tab", async (ev: KeyboardEvent) => {
-
-							const node = await createChildNode(this.canvas, false);
-							if (!node) return;
-
-							setTimeout(() => {
-								const realNode = this.canvas.nodes?.get(node.id);
-								realNode?.startEditing();
-								this.canvas.zoomToSelection();
-							}, 0);
-						});
-
-						// use ctrl enter to edit node, perventing vim mode issue when editing node
-						this.scope.register(["Ctrl"], 'Enter', async (ev: KeyboardEvent) => {
-							let node = app.workspace.activeLeaf.view.canvas.selection.values().next().value;
-							let vimState = app.isVimEnabled();
-							// console.log("vimState", vimState);
-
-							if (vimState) {
-								app.vault.setConfig("vimMode", false);
-								node.startEditing();
-								app.vault.setConfig("vimMode", true);
-								
+			const canvasViewunistaller = around(
+				canvasView.constructor.prototype,
+				{
+					onOpen: (next) =>
+						async function () {
+							if (self.settings.create.createFloat) {
+								this.scope.register(["Mod"], "ArrowUp", () => {
+									createFloatingNode(this.canvas, "top");
+								});
+								this.scope.register(
+									["Mod"],
+									"ArrowDown",
+									() => {
+										createFloatingNode(
+											this.canvas,
+											"bottom"
+										);
+									}
+								);
+								this.scope.register(
+									["Mod"],
+									"ArrowLeft",
+									() => {
+										createFloatingNode(this.canvas, "left");
+									}
+								);
+								this.scope.register(
+									["Mod"],
+									"ArrowRight",
+									() => {
+										createFloatingNode(
+											this.canvas,
+											"right"
+										);
+									}
+								);
 							}
-							else {
-								node.startEditing();
-								app.vault.setConfig("vimMode", true);
+
+							if (self.settings.navigate.useNavigate) {
+								// this.scope.register(["Alt"], "ArrowUp", () => {
+								// 	navigate(this.canvas, "top");
+								// });
+								// this.scope.register(["Alt"], "ArrowDown", () => {
+								// 	navigate(this.canvas, "bottom");
+								// });
+								// this.scope.register(["Alt"], "ArrowLeft", () => {
+								// 	navigate(this.canvas, "left");
+								// });
+								// this.scope.register(["Alt"], "ArrowRight", () => {
+								// 	navigate(this.canvas, "right");
+								// });
+								this.scope.register([], "k", () => {
+									navigate(this.canvas, "top");
+								});
+								this.scope.register([], "j", () => {
+									navigate(this.canvas, "bottom");
+								});
+								this.scope.register([], "h", () => {
+									navigate(this.canvas, "left");
+								});
+								this.scope.register([], "l", () => {
+									navigate(this.canvas, "right");
+								});
 							}
-						});
 
-						// use shift Z to zoom out
-						this.scope.register(['Shift'], 'Z', async (ev: KeyboardEvent) => {
-							this.canvas.zoomBy(-1);
-						});
+							// use alt HJKL to move node
+							this.scope.register(["Alt"], "h", () => {
+								let node =
+									app.workspace.activeLeaf.view.canvas.selection
+										.values()
+										.next().value;
+								node.x -= 10;
+								node.moveTo(node);
+							});
+							this.scope.register(["Alt"], "j", () => {
+								let node =
+									app.workspace.activeLeaf.view.canvas.selection
+										.values()
+										.next().value;
+								node.y += 10;
+								node.moveTo(node);
+							});
+							this.scope.register(["Alt"], "k", () => {
+								let node =
+									app.workspace.activeLeaf.view.canvas.selection
+										.values()
+										.next().value;
+								node.y -= 10;
+								node.moveTo(node);
+							});
+							this.scope.register(["Alt"], "l", () => {
+								let node =
+									app.workspace.activeLeaf.view.canvas.selection
+										.values()
+										.next().value;
+								node.x += 10;
+								node.moveTo(node);
+							});
 
-						// add shift S to multiply the node height
-						this.scope.register(['Shift'], 'S', async (ev: KeyboardEvent) => {
-							const selection = this.canvas.selection;
-							if (selection.size !== 1) return;
-							const node = selection.entries().next().value[1];
-							if (node?.label || node?.url) return;
-							if (node.isEditing) return;
-							node.height *= 2;
-							node.render();
-							node.moveTo(node);
-						});
-						// add ctrl S to scale back
-						this.scope.register(['Ctrl'], 'S', async (ev: KeyboardEvent) => {
-							const selection = this.canvas.selection;
-							if (selection.size !== 1) return;
-							const node = selection.entries().next().value[1];
-							if (node?.label || node?.url) return;
-							if (node.isEditing) return;
-							node.height *= 1/2;
-							node.render();
-							node.moveTo(node);
-						});
+							this.scope.register([], "Enter", async () => {
+								const node = await createSiblingNode(
+									this.canvas,
+									false
+								);
+								if (!node) return;
 
-						// add R key to focus on a node in viewport
-						this.scope.register([], "r", async (ev: KeyboardEvent) => {
-							const selection = this.canvas.selection;
-							if (selection.size == 0) {
-								let lastNode = this.canvas.getViewportNodes().last();
-								this.canvas.select(lastNode);
-								// app.vault.setConfig("vimMode", false);
-							}
-						})
+								setTimeout(() => {
+									const realNode = this.canvas.nodes?.get(
+										node.id
+									);
+									realNode?.startEditing();
+									this.canvas.zoomToSelection();
+								}, 0);
+							});
 
-						return next.call(this);
-					}
-			});
+							this.scope.register(
+								[],
+								"Tab",
+								async (ev: KeyboardEvent) => {
+									const node = await createChildNode(
+										this.canvas,
+										false
+									);
+									if (!node) return;
+
+									setTimeout(() => {
+										const realNode = this.canvas.nodes?.get(
+											node.id
+										);
+										realNode?.startEditing();
+										this.canvas.zoomToSelection();
+									}, 0);
+								}
+							);
+
+							// use ctrl enter to edit node, perventing vim mode issue when editing node
+							this.scope.register(
+								["Ctrl"],
+								"Enter",
+								async (ev: KeyboardEvent) => {
+									let node =
+										app.workspace.activeLeaf.view.canvas.selection
+											.values()
+											.next().value;
+									let vimState = app.isVimEnabled();
+									// console.log("vimState", vimState);
+
+									if (vimState) {
+										app.vault.setConfig("vimMode", false);
+										node.startEditing();
+										app.vault.setConfig("vimMode", true);
+									} else {
+										node.startEditing();
+										app.vault.setConfig("vimMode", true);
+									}
+								}
+							);
+
+							// use shift Z to zoom out
+							this.scope.register(
+								["Shift"],
+								"Z",
+								async (ev: KeyboardEvent) => {
+									this.canvas.zoomBy(-1);
+								}
+							);
+
+							// add shift S to multiply the node height
+							this.scope.register(
+								["Shift"],
+								"S",
+								async (ev: KeyboardEvent) => {
+									const selection = this.canvas.selection;
+									if (selection.size !== 1) return;
+									const node = selection.entries().next()
+										.value[1];
+									if (node?.label || node?.url) return;
+									if (node.isEditing) return;
+									node.height *= 2;
+									node.moveTo(node);
+								}
+							);
+							// add ctrl S to scale back
+							this.scope.register(
+								["Ctrl"],
+								"S",
+								async (ev: KeyboardEvent) => {
+									const selection = this.canvas.selection;
+									if (selection.size !== 1) return;
+									const node = selection.entries().next()
+										.value[1];
+									if (node?.label || node?.url) return;
+									if (node.isEditing) return;
+									node.height *= 1 / 2;
+									node.moveTo(node);
+								}
+							);
+
+							// add R key to focus on a node in viewport
+							this.scope.register(
+								[],
+								"r",
+								async (ev: KeyboardEvent) => {
+									const selection = this.canvas.selection;
+									if (selection.size == 0) {
+										let lastNode = this.canvas
+											.getViewportNodes()
+											.last();
+										this.canvas.select(lastNode);
+										// app.vault.setConfig("vimMode", false);
+									}
+								}
+							);
+
+							return next.call(this);
+						},
+				}
+			);
 
 			const uninstaller = around(patchCanvasView.prototype, {
 				onKeydown: (next) =>
@@ -542,28 +697,35 @@ export default class CanvasMindMap extends Plugin {
 							if (this.selection.size !== 1) {
 								return next.call(this, e);
 							}
-							const childNode = this.selection.entries().next().value[1];
+							const childNode = this.selection.entries().next()
+								.value[1];
 							if (childNode.isEditing) return;
 
-							const edges = this.getEdgesForNode(childNode).filter((item: any) => {
+							const edges = this.getEdgesForNode(
+								childNode
+							).filter((item: any) => {
 								return item.to.node.id === childNode.id;
 							});
 							if (edges.length === 0) return;
 							const parentNode = edges[0].from.node;
 
-
 							next.call(this, e);
 
 							let wholeHeight = 0;
-							let parentEdges = this.getEdgesForNode(parentNode).filter((item: any) => {
-								return (item.from.node.id === parentNode.id && item.to.side === "left");
+							let parentEdges = this.getEdgesForNode(
+								parentNode
+							).filter((item: any) => {
+								return (
+									item.from.node.id === parentNode.id &&
+									item.to.side === "left"
+								);
 							});
 
 							let allnodes = [];
 							for (let i = 0; i < parentEdges.length; i++) {
 								let node = parentEdges[i].to.node;
 								allnodes.push(node);
-								wholeHeight += (node.height + 20);
+								wholeHeight += node.height + 20;
 							}
 							allnodes.sort((a: any, b: any) => {
 								return a.y - b.y;
@@ -583,12 +745,15 @@ export default class CanvasMindMap extends Plugin {
 								if (i === 0) {
 									(tempNode = allnodes[i]).moveTo({
 										x: childNode.x,
-										y: parentNode.y + parentNode.height - (wholeHeight / 2)
+										y:
+											parentNode.y +
+											parentNode.height -
+											wholeHeight / 2,
 									});
 								} else {
 									(tempNode = allnodes[i]).moveTo({
 										x: childNode.x,
-										y: preNode.y + preNode.height + 20
+										y: preNode.y + preNode.height + 20,
 									});
 								}
 								this.requestSave();
@@ -638,7 +803,9 @@ export default class CanvasMindMap extends Plugin {
 
 	patchCanvasNode() {
 		const patchNode = () => {
-			const canvasView = app.workspace.getLeavesOfType("canvas").first()?.view;
+			const canvasView = app.workspace
+				.getLeavesOfType("canvas")
+				.first()?.view;
 			// @ts-ignore
 			const canvas = canvasView?.canvas;
 			if (!canvas) return false;
@@ -653,13 +820,15 @@ export default class CanvasMindMap extends Plugin {
 				setColor: (next: any) =>
 					function (e: any, t: any) {
 						next.call(this, e, t);
-						this.canvas.getEdgesForNode(this).forEach((edge: any) => {
-							if (edge.from.node === this) {
-								edge.setColor(e, true);
-								edge.render();
-								// edge.to.node.setColor(e, true);
-							}
-						});
+						this.canvas
+							.getEdgesForNode(this)
+							.forEach((edge: any) => {
+								if (edge.from.node === this) {
+									edge.setColor(e, true);
+									edge.render();
+									// edge.to.node.setColor(e, true);
+								}
+							});
 						canvas.requestSave();
 					},
 			});
@@ -685,7 +854,12 @@ export default class CanvasMindMap extends Plugin {
 
 			console.log(editorInfo);
 			if (!editorInfo) return false;
-			if (!editorInfo || !editorInfo.containerEl || editorInfo.containerEl.closest('.common-editor-inputer')) return false;
+			if (
+				!editorInfo ||
+				!editorInfo.containerEl ||
+				editorInfo.containerEl.closest(".common-editor-inputer")
+			)
+				return false;
 
 			const patchEditorInfo = editorInfo.constructor;
 
@@ -718,7 +892,11 @@ export default class CanvasMindMap extends Plugin {
 	}
 
 	public async loadSettings(): Promise<void> {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		this.settings = Object.assign(
+			{},
+			DEFAULT_SETTINGS,
+			await this.loadData()
+		);
 	}
 
 	async saveSettings(): Promise<void> {
