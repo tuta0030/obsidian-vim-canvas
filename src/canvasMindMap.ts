@@ -40,7 +40,6 @@ const createEdge = async (node1: any, node2: any, canvas: any) => {
 	);
 };
 
-
 const newNavigate = (canvas: Canvas, direction: 'h'|'j'|'k'|'l') => {
     const currentSelection = canvas.selection;
     if (currentSelection.size !== 1) return;
@@ -121,68 +120,6 @@ const newNavigate = (canvas: Canvas, direction: 'h'|'j'|'k'|'l') => {
     return nextNode;
 };
 
-
-const navigate = (canvas: Canvas, direction: string) => {
-	const currentSelection = canvas.selection;
-	if (currentSelection.size !== 1) return;
-
-	// Check if the selected node is editing
-	if (currentSelection.values().next().value.isEditing) return;
-
-	const selectedItem = currentSelection.values().next().value as CanvasNode;
-	const viewportNodes = canvas.getViewportNodes();
-	const { x, y, width, height } = selectedItem;
-
-	// remove deselectAll to keep the last node selected
-	// canvas.deselectAll();
-
-	const isVertical = direction === "top" || direction === "bottom";
-	const comparePrimary = isVertical
-		? (a: CanvasNode, b: CanvasNode) => a.y - b.y
-		: (a: CanvasNode, b: CanvasNode) => a.x - b.x;
-	const compareSecondary = isVertical
-		? (a: CanvasNode, b: CanvasNode) => a.x - b.x
-		: (a: CanvasNode, b: CanvasNode) => a.y - b.y;
-	const filterCondition = (node: CanvasNode) => {
-		const inRange = isVertical
-			? node.x < x + width / 2 && node.x + node.width > x + width / 2
-			: node.y < y + height / 2 && node.y + node.height > y + height / 2;
-		const directionCondition =
-			direction === "top"
-				? node.y < y
-				: direction === "bottom"
-				? node.y > y
-				: direction === "left"
-				? node.x < x
-				: node.x > x;
-		return inRange && directionCondition;
-	};
-
-	// TODO fix left movement
-	const verticalThreashold = 50;
-	const filteredNodes = viewportNodes.filter(filterCondition);
-	const sortedNodes =
-		filteredNodes.length > 0
-			? filteredNodes.sort(comparePrimary)
-			: viewportNodes
-					.filter((node: CanvasNode) => {
-						if (direction === "top") return node.y < y;
-						if (direction === "bottom") return node.y > y;
-						if (direction === "left") return (node.x < x);
-						if (direction === "right") return node.x > x;
-						return false;
-					})
-					.sort(compareSecondary);
-
-	const nextNode = sortedNodes[0];
-
-	if (nextNode) {
-		canvas.selectOnly(nextNode);
-		canvas.zoomToSelection();
-	}
-
-	return nextNode;
-};
 
 const createFloatingNode = (canvas: any, direction: string) => {
 	let selection = canvas.selection;
@@ -587,30 +524,6 @@ export default class CanvasMindMap extends Plugin {
 							}
 
 							if (self.settings.navigate.useNavigate) {
-								// this.scope.register(["Alt"], "ArrowUp", () => {
-								// 	navigate(this.canvas, "top");
-								// });
-								// this.scope.register(["Alt"], "ArrowDown", () => {
-								// 	navigate(this.canvas, "bottom");
-								// });
-								// this.scope.register(["Alt"], "ArrowLeft", () => {
-								// 	navigate(this.canvas, "left");
-								// });
-								// this.scope.register(["Alt"], "ArrowRight", () => {
-								// 	navigate(this.canvas, "right");
-								// });
-								// this.scope.register([], "k", () => {
-								// 	navigate(this.canvas, "top");
-								// });
-								// this.scope.register([], "j", () => {
-								// 	navigate(this.canvas, "bottom");
-								// });
-								// this.scope.register([], "h", () => {
-								// 	navigate(this.canvas, "left");
-								// });
-								// this.scope.register([], "l", () => {
-								// 	navigate(this.canvas, "right");
-								// });
 
 								this.scope.register([], "l", () => {
 									newNavigate(this.canvas, "l");
@@ -625,6 +538,22 @@ export default class CanvasMindMap extends Plugin {
 								});
 								this.scope.register([], "h", () => {
 									newNavigate(this.canvas, "h");
+								});
+
+								this.scope.register(['Alt'], "ArrowLeft", () => {
+									newNavigate(this.canvas, "h");
+								});
+
+								this.scope.register(['Alt'], "ArrowDown", () => {
+									newNavigate(this.canvas, "j");
+								});
+
+								this.scope.register(['Alt'], "ArrowUp", () => {
+									newNavigate(this.canvas, "k");
+								});
+
+								this.scope.register(['Alt'], "ArrowRight", () => {
+									newNavigate(this.canvas, "l");
 								});
 							}
 
