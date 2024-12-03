@@ -105,20 +105,37 @@ const newNavigate = (canvas: Canvas, direction: 'h'|'j'|'k'|'l') => {
         const angleDifference = calculateAngleDifference(angle, targetAngle);
 
         return { node, distance, isInDirection, angleDifference };
-    }).filter(item => item.node.id !== selectedItem.id && item.isInDirection && item.angleDifference <= 60); // Filter within 60 degrees on either side of target angle
+    }).filter(item => item.node.id !== selectedItem.id && item.isInDirection);
 
-    // Sort by distance
-    nodesWithDistances.sort((a, b) => a.distance - b.distance);
+    // First, filter nodes within 6 degrees
+    const nodesWithin6Degrees = nodesWithDistances.filter(item => item.angleDifference <= 3 && viewportNodes.includes(item.node));
 
-    const nextNode = nodesWithDistances[0]?.node;
-
-    if (nextNode) {
-        canvas.selectOnly(nextNode);
-        canvas.zoomToSelection();
+    // If there are nodes within 6 degrees, and nodes in viewportNodes, sort them by distance and select the closest one
+    if (nodesWithin6Degrees.length > 0) {
+        nodesWithin6Degrees.sort((a, b) => a.distance - b.distance);
+        const nextNode = nodesWithin6Degrees[0].node;
+        if (nextNode) {
+            canvas.selectOnly(nextNode);
+            canvas.zoomToSelection();
+        }
+        return nextNode;
     }
 
-    return nextNode;
+    // If no nodes within 6 degrees, filter nodes within 60 degrees and select the closest one
+    const nodesWithin60Degrees = nodesWithDistances.filter(item => item.angleDifference <= 60);
+    if (nodesWithin60Degrees.length > 0) {
+        nodesWithin60Degrees.sort((a, b) => a.distance - b.distance);
+        const nextNode = nodesWithin60Degrees[0].node;
+        if (nextNode) {
+            canvas.selectOnly(nextNode);
+            canvas.zoomToSelection();
+        }
+        return nextNode;
+    }
+
+    return null; // No suitable node found
 };
+
 
 
 const createFloatingNode = (canvas: any, direction: string) => {
