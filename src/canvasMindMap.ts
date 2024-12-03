@@ -108,7 +108,7 @@ const newNavigate = (canvas: Canvas, direction: 'h'|'j'|'k'|'l') => {
     }).filter(item => item.node.id !== selectedItem.id && item.isInDirection);
 
     // First, filter nodes within 6 degrees
-    const nodesWithin6Degrees = nodesWithDistances.filter(item => item.angleDifference <= 3 && viewportNodes.includes(item.node));
+    const nodesWithin6Degrees = nodesWithDistances.filter(item => item.angleDifference <= 3 && viewportNodes.includes(item.node) && (direction === 'h' || direction === 'l'));
 
     // If there are nodes within 6 degrees, and nodes in viewportNodes, sort them by distance and select the closest one
     if (nodesWithin6Degrees.length > 0) {
