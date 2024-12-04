@@ -40,103 +40,139 @@ const createEdge = async (node1: any, node2: any, canvas: any) => {
 	);
 };
 
-const newNavigate = (canvas: Canvas, direction: 'h'|'j'|'k'|'l') => {
-    const currentSelection = canvas.selection;
-    if (currentSelection.size !== 1) return;
+const newNavigate = (canvas: Canvas, direction: "h" | "j" | "k" | "l") => {
+	let lastSelection = lastSelectionNode();
+	let currentSelection = canvas.selection.size >1 ? lastSelection :  canvas.selection;
+	// if (currentSelection.size !== 1);
 
-    // Check if the selected node is editing
-    if (currentSelection.values().next().value.isEditing) return;
+	// Check if the selected node is editing
+	if (canvas.selection.size == 1) {
+		if (currentSelection.values().next().value.isEditing) return;
+	}
 
-    const selectedItem = currentSelection.values().next().value as CanvasNode;
-    const allTheNodes = canvas.nodes;
-    const viewportNodes = canvas.getViewportNodes();
+	const selectedItem = canvas.selection.size == 1 ? currentSelection.values().next().value as CanvasNode : currentSelection;
+	const allTheNodes = canvas.nodes;
+	const viewportNodes = canvas.getViewportNodes();
 
-    const { x, y } = selectedItem;
+	const { x, y } = selectedItem;
 
-    // Define direction vectors
-    const directionVectors = {
-        'h': { dx: -1, dy: 0 }, // left
-        'j': { dx: 0, dy: 1 },  // down
-        'k': { dx: 0, dy: -1 }, // up
-        'l': { dx: 1, dy: 0 }   // right
-    };
+	// Define direction vectors
+	const directionVectors = {
+		h: { dx: -1, dy: 0 }, // left
+		j: { dx: 0, dy: 1 }, // down
+		k: { dx: 0, dy: -1 }, // up
+		l: { dx: 1, dy: 0 }, // right
+	};
 
-    const targetVector = directionVectors[direction];
-    if (!targetVector) return;
+	const targetVector = directionVectors[direction];
+	if (!targetVector) return;
 
-    // Calculate the target angle in degrees
-    const targetAngle = Math.atan2(targetVector.dy, targetVector.dx) * (180 / Math.PI);
+	// Calculate the target angle in degrees
+	const targetAngle =
+		Math.atan2(targetVector.dy, targetVector.dx) * (180 / Math.PI);
 
-    // Helper function to calculate angle difference considering 360 degree wrap-around
-    const calculateAngleDifference = (angle1: number, angle2: number) => {
-        let diff = Math.abs(angle1 - angle2);
-        if (diff > 180) {
-            diff = 360 - diff;
-        }
-        return diff;
-    };
+	// Helper function to calculate angle difference considering 360 degree wrap-around
+	const calculateAngleDifference = (angle1: number, angle2: number) => {
+		let diff = Math.abs(angle1 - angle2);
+		if (diff > 180) {
+			diff = 360 - diff;
+		}
+		return diff;
+	};
 
-    // Calculate distances and angles for all nodes
-    const nodesWithDistances = Array.from(allTheNodes.values()).map(node => {
-        const nx = node.x;
-        const ny = node.y;
-        const dx = nx - x;
-        const dy = ny - y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+	// Calculate distances and angles for all nodes
+	const nodesWithDistances = Array.from(allTheNodes.values())
+		.map((node) => {
+			const nx = node.x;
+			const ny = node.y;
+			const dx = nx - x;
+			const dy = ny - y;
+			const distance = Math.sqrt(dx * dx + dy * dy);
 
-        // Determine if the node is in the desired direction
-        let isInDirection = false;
-        switch (direction) {
-            case 'h': // left
-                isInDirection = dx < 0;
-                break;
-            case 'j': // down
-                isInDirection = dy > 0;
-                break;
-            case 'k': // up
-                isInDirection = dy < 0;
-                break;
-            case 'l': // right
-                isInDirection = dx > 0;
-                break;
-        }
+			// Determine if the node is in the desired direction
+			let isInDirection = false;
+			switch (direction) {
+				case "h": // left
+					isInDirection = dx < 0;
+					break;
+				case "j": // down
+					isInDirection = dy > 0;
+					break;
+				case "k": // up
+					isInDirection = dy < 0;
+					break;
+				case "l": // right
+					isInDirection = dx > 0;
+					break;
+			}
 
-        const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-        const angleDifference = calculateAngleDifference(angle, targetAngle);
+			const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+			const angleDifference = calculateAngleDifference(
+				angle,
+				targetAngle
+			);
 
-        return { node, distance, isInDirection, angleDifference };
-    }).filter(item => item.node.id !== selectedItem.id && item.isInDirection);
+			return { node, distance, isInDirection, angleDifference };
+		})
+		.filter(
+			(item) => item.node.id !== selectedItem.id && item.isInDirection
+		);
 
-    // First, filter nodes within 6 degrees
-    const nodesWithin6Degrees = nodesWithDistances.filter(item => item.angleDifference <= 3 && viewportNodes.includes(item.node) && (direction === 'h' || direction === 'l'));
+	// First, filter nodes within 6 degrees
+	const nodesWithin6Degrees = nodesWithDistances.filter(
+		(item) =>
+			item.angleDifference <= 3 &&
+			viewportNodes.includes(item.node) &&
+			(direction === "h" || direction === "l")
+	);
 
-    // If there are nodes within 6 degrees, and nodes in viewportNodes, sort them by distance and select the closest one
-    if (nodesWithin6Degrees.length > 0) {
-        nodesWithin6Degrees.sort((a, b) => a.distance - b.distance);
-        const nextNode = nodesWithin6Degrees[0].node;
-        if (nextNode) {
-            canvas.selectOnly(nextNode);
-            canvas.zoomToSelection();
-        }
-        return nextNode;
-    }
+	// If there are nodes within 6 degrees, and nodes in viewportNodes, sort them by distance and select the closest one
+	if (nodesWithin6Degrees.length > 0) {
+		nodesWithin6Degrees.sort((a, b) => a.distance - b.distance);
+		const nextNode = nodesWithin6Degrees[0].node;
+		return nextNode;
+	}
 
-    // If no nodes within 6 degrees, filter nodes within 60 degrees and select the closest one
-    const nodesWithin60Degrees = nodesWithDistances.filter(item => item.angleDifference <= 60);
-    if (nodesWithin60Degrees.length > 0) {
-        nodesWithin60Degrees.sort((a, b) => a.distance - b.distance);
-        const nextNode = nodesWithin60Degrees[0].node;
-        if (nextNode) {
-            canvas.selectOnly(nextNode);
-            canvas.zoomToSelection();
-        }
-        return nextNode;
-    }
-
-    return null; // No suitable node found
+	// If no nodes within 6 degrees, filter nodes within 60 degrees and select the closest one
+	const nodesWithin60Degrees = nodesWithDistances.filter(
+		(item) => item.angleDifference <= 60
+	);
+	if (nodesWithin60Degrees.length > 0) {
+		nodesWithin60Degrees.sort((a, b) => a.distance - b.distance);
+		const nextNode = nodesWithin60Degrees[0].node;
+		return nextNode;
+	}
 };
 
 
+const lastSelectionNode = () => {
+	const canvas = app.workspace.activeLeaf.view.canvas;
+	const lastSelectionNode = canvas.selection.values().toArray();
+	return lastSelectionNode[canvas.selection.size-1];
+}
+
+// Select next node
+const selectNextNode = (nextNode: CanvasNode | undefined) => {
+	const canvas = app.workspace.activeLeaf.view.canvas;
+	if (!nextNode) return;
+	if (nextNode) {
+		canvas.selectOnly(nextNode);
+		canvas.zoomToSelection();
+	}
+};
+
+// TODO fix when selection is more than one node
+const selectNextNodeAndCurrent = (nextNode: CanvasNode | undefined) => {
+	const canvas = app.workspace.activeLeaf.view.canvas;
+	if (!nextNode) {
+		return;
+	}
+	if (nextNode) {
+		canvas.select(nextNode);
+		canvas.zoomToSelection();
+		return nextNode;
+	}
+}
 
 const createFloatingNode = (canvas: any, direction: string) => {
 	let selection = canvas.selection;
@@ -542,71 +578,118 @@ export default class CanvasMindMap extends Plugin {
 
 							if (self.settings.navigate.useNavigate) {
 
-								this.scope.register([], "l", () => {
-									newNavigate(this.canvas, "l");
-								});
-
-								this.scope.register([], "k", () => {
-									newNavigate(this.canvas, "k");
+								// HJKL to select next node
+								this.scope.register([], "h", () => {
+									selectNextNode(newNavigate(this.canvas, "h"));
 								});
 
 								this.scope.register([], "j", () => {
-									newNavigate(this.canvas, "j");
-								});
-								this.scope.register([], "h", () => {
-									newNavigate(this.canvas, "h");
+									selectNextNode(newNavigate(this.canvas, "j"));
 								});
 
-								this.scope.register(['Alt'], "ArrowLeft", () => {
-									newNavigate(this.canvas, "h");
+								this.scope.register([], "k", () => {
+									selectNextNode(newNavigate(this.canvas, "k"));
 								});
 
-								this.scope.register(['Alt'], "ArrowDown", () => {
-									newNavigate(this.canvas, "j");
+								this.scope.register([], "l", () => {
+									selectNextNode(newNavigate(this.canvas, "l"));
 								});
 
-								this.scope.register(['Alt'], "ArrowUp", () => {
-									newNavigate(this.canvas, "k");
+								// use alt and arrowkeys to select next node
+								this.scope.register(
+									["Alt"],
+									"ArrowLeft",
+									() => {
+										selectNextNode(newNavigate(this.canvas, "h"));
+									}
+								);
+
+								this.scope.register(
+									["Alt"],
+									"ArrowDown",
+									() => {
+										selectNextNode(newNavigate(this.canvas, "j"));
+									}
+								);
+
+								this.scope.register(
+									["Alt"], 
+									"ArrowUp", 
+									() => {
+										selectNextNode(newNavigate(this.canvas, "k"));
 								});
 
-								this.scope.register(['Alt'], "ArrowRight", () => {
-									newNavigate(this.canvas, "l");
-								});
+								this.scope.register(
+									["Alt"],
+									"ArrowRight",
+									() => {
+										selectNextNode(newNavigate(this.canvas, "l"));
+									}
+								);
+
 							}
 
+							// TODO fix this for multiple selection
 							// use alt HJKL to move node
 							this.scope.register(["Alt"], "h", () => {
 								let node =
-									app.workspace.activeLeaf.view.canvas.selection
-										.values()
-										.next().value;
+									// app.workspace.activeLeaf.view.canvas.selection
+									this.canvas.selection.values().next().value;
 								node.x -= 10;
 								node.moveTo(node);
 							});
 							this.scope.register(["Alt"], "j", () => {
 								let node =
-									app.workspace.activeLeaf.view.canvas.selection
-										.values()
-										.next().value;
+									// app.workspace.activeLeaf.view.canvas.selection
+									this.canvas.selection.values().next().value;
 								node.y += 10;
 								node.moveTo(node);
 							});
 							this.scope.register(["Alt"], "k", () => {
 								let node =
-									app.workspace.activeLeaf.view.canvas.selection
-										.values()
-										.next().value;
+									// app.workspace.activeLeaf.view.canvas.selection
+									this.canvas.selection.values().next().value;
 								node.y -= 10;
 								node.moveTo(node);
 							});
 							this.scope.register(["Alt"], "l", () => {
 								let node =
-									app.workspace.activeLeaf.view.canvas.selection
-										.values()
-										.next().value;
+									// app.workspace.activeLeaf.view.canvas.selection
+									this.canvas.selection.values().next().value;
 								node.x += 10;
 								node.moveTo(node);
 							});
+
+
+							// TODO sometimes can't select next node, when next node is already selected
+							// use Shift HJKL to select multiple nodes
+							this.scope.register(["Shift"],"h",async (ev: KeyboardEvent) => {
+									const node = await newNavigate(this.canvas,"h");
+									console.log(node);
+									selectNextNodeAndCurrent(node);
+								}
+							);
+
+							this.scope.register(["Shift"],"j",async (ev: KeyboardEvent) => {
+									const node = await newNavigate(this.canvas,"j");
+									console.log(node);
+									selectNextNodeAndCurrent(node);
+								}
+							);
+
+							this.scope.register(["Shift"],"k",async (ev: KeyboardEvent) => {
+									const node = await newNavigate(this.canvas,"k");
+									console.log(node);
+									selectNextNodeAndCurrent(node);
+								}
+							);
+
+							this.scope.register(["Shift"],"l",async (ev: KeyboardEvent) => {
+									const node = await newNavigate(this.canvas,"l");
+									console.log(node);
+									selectNextNodeAndCurrent(node);
+								}
+							);
 
 							this.scope.register([], "Enter", async () => {
 								const node = await createSiblingNode(
