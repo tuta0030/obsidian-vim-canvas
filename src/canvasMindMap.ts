@@ -43,17 +43,19 @@ const createEdge = async (node1: any, node2: any, canvas: any) => {
 // Global Variable for multiple selection with navigation
 let lastNode: CanvasNode;
 const newNavigate = (canvas: Canvas, direction: "h" | "j" | "k" | "l") => {
-	// let lastSelection = lastSelectionNode();
-	// let currentSelection = canvas.selection.size >1 ? lastSelection :  canvas.selection;
-	let currentSelection = lastNode ? lastNode : canvas.selection;
-	// if (currentSelection.size !== 1);
+	let lastNodeSet: Set<CanvasNode> = new Set();
+	if (lastNode) {
+		lastNodeSet.add(lastNode);
+	};
+	let currentSelection = lastNode ? lastNodeSet : canvas.selection;
 
 	// Check if the selected node is editing
-	if (currentSelection instanceof Set) {
-		if (currentSelection.values().next().value.isEditing) return;
-	}
+	if (currentSelection.values().next().value.isEditing) return;
 
-	const selectedItem = currentSelection instanceof Set? currentSelection.values().next().value as CanvasNode : currentSelection;
+	const selectedItem =
+		currentSelection instanceof Set
+			? (currentSelection.values().next().value as CanvasNode)
+			: currentSelection;
 	const allTheNodes = canvas.nodes;
 	const viewportNodes = canvas.getViewportNodes();
 
@@ -149,7 +151,6 @@ const newNavigate = (canvas: Canvas, direction: "h" | "j" | "k" | "l") => {
 	}
 };
 
-
 // const lastSelectionNode = () => {
 // 	const canvas = app.workspace.activeLeaf.view.canvas;
 // 	const lastSelectionNode = canvas.selection.values().toArray();
@@ -176,7 +177,7 @@ const selectNextNodeAndCurrent = (nextNode: CanvasNode | undefined) => {
 		canvas.zoomToSelection();
 		return nextNode;
 	}
-}
+};
 
 const createFloatingNode = (canvas: any, direction: string) => {
 	let selection = canvas.selection;
@@ -581,22 +582,33 @@ export default class CanvasMindMap extends Plugin {
 							}
 
 							if (self.settings.navigate.useNavigate) {
+								const hjklNavigate = (
+									direction: "h" | "j" | "k" | "l"
+								) => {
+									const currentSelection =
+										this.canvas.selection;
+									if (!currentSelection.isEditing) {
+										selectNextNode(
+											newNavigate(this.canvas, direction)
+										);
+									}
+								};
 
 								// HJKL to select next node
 								this.scope.register([], "h", () => {
-									selectNextNode(newNavigate(this.canvas, "h"));
+									hjklNavigate("h");
 								});
 
 								this.scope.register([], "j", () => {
-									selectNextNode(newNavigate(this.canvas, "j"));
+									hjklNavigate("j");
 								});
 
 								this.scope.register([], "k", () => {
-									selectNextNode(newNavigate(this.canvas, "k"));
+									hjklNavigate("k");
 								});
 
 								this.scope.register([], "l", () => {
-									selectNextNode(newNavigate(this.canvas, "l"));
+									hjklNavigate("l");
 								});
 
 								// use alt and arrowkeys to select next node
@@ -604,7 +616,7 @@ export default class CanvasMindMap extends Plugin {
 									["Alt"],
 									"ArrowLeft",
 									() => {
-										selectNextNode(newNavigate(this.canvas, "h"));
+										hjklNavigate("h");
 									}
 								);
 
@@ -612,78 +624,98 @@ export default class CanvasMindMap extends Plugin {
 									["Alt"],
 									"ArrowDown",
 									() => {
-										selectNextNode(newNavigate(this.canvas, "j"));
+										hjklNavigate("j");
 									}
 								);
 
-								this.scope.register(
-									["Alt"], 
-									"ArrowUp", 
-									() => {
-										selectNextNode(newNavigate(this.canvas, "k"));
+								this.scope.register(["Alt"], "ArrowUp", () => {
+									hjklNavigate("k");
 								});
 
 								this.scope.register(
 									["Alt"],
 									"ArrowRight",
 									() => {
-										selectNextNode(newNavigate(this.canvas, "l"));
+										hjklNavigate("l");
 									}
 								);
-
 							}
 
 							// use alt HJKL to move node
 							this.scope.register(["Alt"], "h", () => {
-								let node = this.canvas.selection
-								node.forEach((node:CanvasNode) => {
+								let node = this.canvas.selection;
+								node.forEach((node: CanvasNode) => {
 									node.x -= 10;
 									node.moveTo(node);
 								});
 							});
 							this.scope.register(["Alt"], "j", () => {
-								let node = this.canvas.selection
-								node.forEach((node:CanvasNode) => {
+								let node = this.canvas.selection;
+								node.forEach((node: CanvasNode) => {
 									node.y += 10;
 									node.moveTo(node);
 								});
 							});
 							this.scope.register(["Alt"], "k", () => {
-								let node = this.canvas.selection
-								node.forEach((node:CanvasNode) => {
+								let node = this.canvas.selection;
+								node.forEach((node: CanvasNode) => {
 									node.y -= 10;
 									node.moveTo(node);
 								});
 							});
 							this.scope.register(["Alt"], "l", () => {
-								let node = this.canvas.selection
-								node.forEach((node:CanvasNode) => {
+								let node = this.canvas.selection;
+								node.forEach((node: CanvasNode) => {
 									node.x += 10;
 									node.moveTo(node);
 								});
 							});
 
 							// use Shift HJKL to select multiple nodes
-							this.scope.register(["Shift"],"h",async (ev: KeyboardEvent) => {
-									const node = await newNavigate(this.canvas,"h");
+							this.scope.register(
+								["Shift"],
+								"h",
+								async (ev: KeyboardEvent) => {
+									const node = await newNavigate(
+										this.canvas,
+										"h"
+									);
 									selectNextNodeAndCurrent(node);
 								}
 							);
 
-							this.scope.register(["Shift"],"j",async (ev: KeyboardEvent) => {
-									const node = await newNavigate(this.canvas,"j");
+							this.scope.register(
+								["Shift"],
+								"j",
+								async (ev: KeyboardEvent) => {
+									const node = await newNavigate(
+										this.canvas,
+										"j"
+									);
 									selectNextNodeAndCurrent(node);
 								}
 							);
 
-							this.scope.register(["Shift"],"k",async (ev: KeyboardEvent) => {
-									const node = await newNavigate(this.canvas,"k");
+							this.scope.register(
+								["Shift"],
+								"k",
+								async (ev: KeyboardEvent) => {
+									const node = await newNavigate(
+										this.canvas,
+										"k"
+									);
 									selectNextNodeAndCurrent(node);
 								}
 							);
 
-							this.scope.register(["Shift"],"l",async (ev: KeyboardEvent) => {
-									const node = await newNavigate(this.canvas,"l");
+							this.scope.register(
+								["Shift"],
+								"l",
+								async (ev: KeyboardEvent) => {
+									const node = await newNavigate(
+										this.canvas,
+										"l"
+									);
 									selectNextNodeAndCurrent(node);
 								}
 							);
