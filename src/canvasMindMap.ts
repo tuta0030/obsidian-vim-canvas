@@ -40,17 +40,20 @@ const createEdge = async (node1: any, node2: any, canvas: any) => {
 	);
 };
 
+// Global Variable for multiple selection with navigation
+let lastNode: CanvasNode;
 const newNavigate = (canvas: Canvas, direction: "h" | "j" | "k" | "l") => {
-	let lastSelection = lastSelectionNode();
-	let currentSelection = canvas.selection.size >1 ? lastSelection :  canvas.selection;
+	// let lastSelection = lastSelectionNode();
+	// let currentSelection = canvas.selection.size >1 ? lastSelection :  canvas.selection;
+	let currentSelection = lastNode ? lastNode : canvas.selection;
 	// if (currentSelection.size !== 1);
 
 	// Check if the selected node is editing
-	if (canvas.selection.size == 1) {
+	if (currentSelection instanceof Set) {
 		if (currentSelection.values().next().value.isEditing) return;
 	}
 
-	const selectedItem = canvas.selection.size == 1 ? currentSelection.values().next().value as CanvasNode : currentSelection;
+	const selectedItem = currentSelection instanceof Set? currentSelection.values().next().value as CanvasNode : currentSelection;
 	const allTheNodes = canvas.nodes;
 	const viewportNodes = canvas.getViewportNodes();
 
@@ -118,7 +121,7 @@ const newNavigate = (canvas: Canvas, direction: "h" | "j" | "k" | "l") => {
 			(item) => item.node.id !== selectedItem.id && item.isInDirection
 		);
 
-	// First, filter nodes within 6 degrees
+	// First, filter nodes within 6 degrees and in viewportNodes
 	const nodesWithin6Degrees = nodesWithDistances.filter(
 		(item) =>
 			item.angleDifference <= 3 &&
@@ -130,6 +133,7 @@ const newNavigate = (canvas: Canvas, direction: "h" | "j" | "k" | "l") => {
 	if (nodesWithin6Degrees.length > 0) {
 		nodesWithin6Degrees.sort((a, b) => a.distance - b.distance);
 		const nextNode = nodesWithin6Degrees[0].node;
+		lastNode = nextNode;
 		return nextNode;
 	}
 
@@ -140,16 +144,17 @@ const newNavigate = (canvas: Canvas, direction: "h" | "j" | "k" | "l") => {
 	if (nodesWithin60Degrees.length > 0) {
 		nodesWithin60Degrees.sort((a, b) => a.distance - b.distance);
 		const nextNode = nodesWithin60Degrees[0].node;
+		lastNode = nextNode;
 		return nextNode;
 	}
 };
 
 
-const lastSelectionNode = () => {
-	const canvas = app.workspace.activeLeaf.view.canvas;
-	const lastSelectionNode = canvas.selection.values().toArray();
-	return lastSelectionNode[canvas.selection.size-1];
-}
+// const lastSelectionNode = () => {
+// 	const canvas = app.workspace.activeLeaf.view.canvas;
+// 	const lastSelectionNode = canvas.selection.values().toArray();
+// 	return lastSelectionNode[canvas.selection.size-1];
+// }
 
 // Select next node
 const selectNextNode = (nextNode: CanvasNode | undefined) => {
@@ -161,7 +166,6 @@ const selectNextNode = (nextNode: CanvasNode | undefined) => {
 	}
 };
 
-// TODO fix when selection is more than one node
 const selectNextNodeAndCurrent = (nextNode: CanvasNode | undefined) => {
 	const canvas = app.workspace.activeLeaf.view.canvas;
 	if (!nextNode) {
@@ -629,64 +633,57 @@ export default class CanvasMindMap extends Plugin {
 
 							}
 
-							// TODO fix this for multiple selection
 							// use alt HJKL to move node
 							this.scope.register(["Alt"], "h", () => {
-								let node =
-									// app.workspace.activeLeaf.view.canvas.selection
-									this.canvas.selection.values().next().value;
-								node.x -= 10;
-								node.moveTo(node);
+								let node = this.canvas.selection
+								node.forEach((node:CanvasNode) => {
+									node.x -= 10;
+									node.moveTo(node);
+								});
 							});
 							this.scope.register(["Alt"], "j", () => {
-								let node =
-									// app.workspace.activeLeaf.view.canvas.selection
-									this.canvas.selection.values().next().value;
-								node.y += 10;
-								node.moveTo(node);
+								let node = this.canvas.selection
+								node.forEach((node:CanvasNode) => {
+									node.y += 10;
+									node.moveTo(node);
+								});
 							});
 							this.scope.register(["Alt"], "k", () => {
-								let node =
-									// app.workspace.activeLeaf.view.canvas.selection
-									this.canvas.selection.values().next().value;
-								node.y -= 10;
-								node.moveTo(node);
+								let node = this.canvas.selection
+								node.forEach((node:CanvasNode) => {
+									node.y -= 10;
+									node.moveTo(node);
+								});
 							});
 							this.scope.register(["Alt"], "l", () => {
-								let node =
-									// app.workspace.activeLeaf.view.canvas.selection
-									this.canvas.selection.values().next().value;
-								node.x += 10;
-								node.moveTo(node);
+								let node = this.canvas.selection
+								node.forEach((node:CanvasNode) => {
+									node.x += 10;
+									node.moveTo(node);
+								});
 							});
 
-
-							// TODO sometimes can't select next node, when next node is already selected
 							// use Shift HJKL to select multiple nodes
 							this.scope.register(["Shift"],"h",async (ev: KeyboardEvent) => {
 									const node = await newNavigate(this.canvas,"h");
-									console.log(node);
 									selectNextNodeAndCurrent(node);
 								}
 							);
 
 							this.scope.register(["Shift"],"j",async (ev: KeyboardEvent) => {
 									const node = await newNavigate(this.canvas,"j");
-									console.log(node);
 									selectNextNodeAndCurrent(node);
 								}
 							);
 
 							this.scope.register(["Shift"],"k",async (ev: KeyboardEvent) => {
 									const node = await newNavigate(this.canvas,"k");
-									console.log(node);
 									selectNextNodeAndCurrent(node);
 								}
 							);
 
 							this.scope.register(["Shift"],"l",async (ev: KeyboardEvent) => {
 									const node = await newNavigate(this.canvas,"l");
-									console.log(node);
 									selectNextNodeAndCurrent(node);
 								}
 							);
