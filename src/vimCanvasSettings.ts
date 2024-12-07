@@ -1,3 +1,5 @@
+// TODO make a proper settings page
+
 import { App, debounce, PluginSettingTab, Setting } from "obsidian";
 import VimCanvas from "./vimCanvasAndCommandPalette";
 
