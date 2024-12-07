@@ -1,35 +1,47 @@
 import {
 	App,
-	Editor,
-	MarkdownView,
-	Modal,
-	Notice,
-	PluginSettingTab,
-	Setting,
 	Canvas,
 	CanvasEdge,
 	CanvasNode,
-	// ItemView,
 	Plugin,
-	requireApiVersion,
-	SettingTab,
 	TFile,
+	ItemView,
 } from "obsidian";
 import { around } from "monkey-around";
-import {
-	addEdge,
-	addNode,
-	createChildFileNode,
-	random,
-} from "./utils";
+import { addEdge, addNode, createChildFileNode, random } from "./utils";
 import {
 	DEFAULT_SETTINGS,
-	MindMapSettings,
-	MindMapSettingTab,
+	vimCanvasSettings,
+	vimCanvasSettingTab,
 } from "./vimCanvasSettings";
 import { CanvasEdgeData } from "obsidian/canvas";
 
-const createEdge = async (node1: CanvasNode, node2: CanvasNode, canvas: Canvas) => {
+function isKeyRelevant(
+	// document: HTMLDocument,
+	event: KeyboardEvent,
+	isSuggesting: boolean
+) {
+	if (!document.activeElement || !event.ctrlKey) {
+		return false;
+	}
+
+	const el = document.activeElement;
+	const isInOmniSearch = el.closest(".omnisearch-modal");
+	const isInAutoCompleteFile = el.closest(".cm-content");
+	// The OmniSearch plugin already maps Ctrl-J and Ctrl-K
+	return (
+		(!isInOmniSearch && el.hasClass("prompt-input")) ||
+			isInAutoCompleteFile ||
+			isSuggesting,
+		event
+	);
+}
+
+const createEdge = async (
+	node1: CanvasNode,
+	node2: CanvasNode,
+	canvas: Canvas
+) => {
 	addEdge(
 		canvas,
 		random(16),
@@ -164,7 +176,7 @@ const navigateNode = (canvas: Canvas, direction: "h" | "j" | "k" | "l") => {
 // }
 
 // Select next node
-const selectNextNode = (nextNode: CanvasNode | undefined) => {
+const selectNextNode = (nextNode: CanvasNode | undefined, app: App) => {
 	const canvas = app.workspace.activeLeaf.view.canvas;
 	if (!nextNode) return;
 	if (nextNode) {
@@ -173,7 +185,11 @@ const selectNextNode = (nextNode: CanvasNode | undefined) => {
 	}
 };
 
-const selectNextNodeAndCurrent = (nextNode: CanvasNode | undefined) => {
+const selectNextNodeAndCurrent = (
+	nextNode: CanvasNode | undefined,
+	app: App
+) => {
+	// TODO find a alternative to get canvas object
 	const canvas = app.workspace.activeLeaf.view.canvas;
 	if (!nextNode) {
 		return;
@@ -341,8 +357,9 @@ const createSiblingNode = async (canvas: Canvas, ignored: boolean) => {
 };
 
 export default class VimCanvas extends Plugin {
-	settings: MindMapSettings;
-	settingTab: MindMapSettingTab;
+	settings: vimCanvasSettings;
+	settingTab: vimCanvasSettingTab;
+	app: App;
 
 	async onload() {
 		await this.registerSettings();
@@ -350,12 +367,47 @@ export default class VimCanvas extends Plugin {
 		this.patchCanvas();
 		this.patchMarkdownFileInfo();
 		this.patchCanvasNode();
+		this.vimCommandPalette();
 	}
 
 	onunload() {}
 
+	vimCommandPalette() {
+		document.addEventListener("keydown", (e) => {
+			const isKeyRelevantValues = isKeyRelevant(
+				e,
+				this.app.workspace.editorSuggest.currentSuggest
+			);
+			if (isKeyRelevantValues) {
+				const key = isKeyRelevantValues.key;
+				// console.log(key);
+				switch (key) {
+					case "j":
+						e.preventDefault();
+						document.dispatchEvent(
+							new KeyboardEvent("keydown", {
+								key: "ArrowDown",
+								code: "ArrowDown",
+							})
+						);
+						break;
+					case "k":
+						e.preventDefault();
+						document.dispatchEvent(
+							new KeyboardEvent("keydown", {
+								key: "ArrowUp",
+								code: "ArrowUp",
+							})
+						);
+						break;
+
+				}
+			}
+		});
+	}
+
 	async registerSettings() {
-		this.settingTab = new MindMapSettingTab(this.app, this);
+		this.settingTab = new vimCanvasSettingTab(this.app, this);
 		this.addSettingTab(this.settingTab);
 		await this.loadSettings();
 	}
@@ -366,7 +418,8 @@ export default class VimCanvas extends Plugin {
 			name: "Split Heading into mindmap based on H1",
 			checkCallback: (checking: boolean) => {
 				// Conditions to check
-				const canvasView = app.workspace.getActiveViewOfType(ItemView);
+				const canvasView =
+					this.app.workspace.getActiveViewOfType(ItemView);
 				if (canvasView?.getViewType() === "canvas") {
 					// If checking is true, we're simply "checking" if the command can be run.
 					// If checking is false, then we want to actually perform the operation.
@@ -390,7 +443,7 @@ export default class VimCanvas extends Plugin {
 							return;
 
 						const currentFileHeadings =
-							app.metadataCache.getFileCache(
+							this.app.metadataCache.getFileCache(
 								currentSelectionItemFile
 							)?.headings;
 						if (!currentFileHeadings) return;
@@ -595,7 +648,11 @@ export default class VimCanvas extends Plugin {
 										this.canvas.selection;
 									if (!currentSelection.isEditing) {
 										selectNextNode(
-											navigateNode(this.canvas, direction)
+											navigateNode(
+												this.canvas,
+												direction
+											),
+											this.app
 										);
 									}
 								};
@@ -686,7 +743,7 @@ export default class VimCanvas extends Plugin {
 										this.canvas,
 										"h"
 									);
-									selectNextNodeAndCurrent(node);
+									selectNextNodeAndCurrent(node, this.app);
 								}
 							);
 
@@ -698,7 +755,7 @@ export default class VimCanvas extends Plugin {
 										this.canvas,
 										"j"
 									);
-									selectNextNodeAndCurrent(node);
+									selectNextNodeAndCurrent(node, this.app);
 								}
 							);
 
@@ -710,7 +767,7 @@ export default class VimCanvas extends Plugin {
 										this.canvas,
 										"k"
 									);
-									selectNextNodeAndCurrent(node);
+									selectNextNodeAndCurrent(node, this.app);
 								}
 							);
 
@@ -722,7 +779,7 @@ export default class VimCanvas extends Plugin {
 										this.canvas,
 										"l"
 									);
-									selectNextNodeAndCurrent(node);
+									selectNextNodeAndCurrent(node, this.app);
 								}
 							);
 
@@ -768,18 +825,27 @@ export default class VimCanvas extends Plugin {
 								"Enter",
 								async (ev: KeyboardEvent) => {
 									let node =
-										app.workspace.activeLeaf.view.canvas.selection
+										this.app.workspace.activeLeaf.view.canvas.selection
 											.values()
 											.next().value;
-									let vimState = app.isVimEnabled();
+									let vimState = this.app.isVimEnabled();
 
 									if (vimState) {
-										app.vault.setConfig("vimMode", false);
+										this.app.vault.setConfig(
+											"vimMode",
+											false
+										);
 										node.startEditing();
-										app.vault.setConfig("vimMode", true);
+										this.app.vault.setConfig(
+											"vimMode",
+											true
+										);
 									} else {
 										node.startEditing();
-										app.vault.setConfig("vimMode", true);
+										this.app.vault.setConfig(
+											"vimMode",
+											true
+										);
 									}
 								}
 							);
@@ -958,7 +1024,7 @@ export default class VimCanvas extends Plugin {
 
 	patchCanvasNode() {
 		const patchNode = () => {
-			const canvasView = app.workspace
+			const canvasView = this.app.workspace
 				.getLeavesOfType("canvas")
 				.first()?.view;
 			// @ts-ignore
@@ -995,8 +1061,8 @@ export default class VimCanvas extends Plugin {
 
 		this.app.workspace.onLayoutReady(() => {
 			if (!patchNode()) {
-				const evt = app.workspace.on("layout-change", () => {
-					patchNode() && app.workspace.offref(evt);
+				const evt = this.app.workspace.on("layout-change", () => {
+					patchNode() && this.app.workspace.offref(evt);
 				});
 				this.registerEvent(evt);
 			}
@@ -1005,7 +1071,7 @@ export default class VimCanvas extends Plugin {
 
 	patchMarkdownFileInfo() {
 		const patchEditor = () => {
-			const editorInfo = app.workspace.activeEditor;
+			const editorInfo = this.app.workspace.activeEditor;
 
 			// console.log(editorInfo);
 			if (!editorInfo) return false;
@@ -1036,9 +1102,9 @@ export default class VimCanvas extends Plugin {
 
 		this.app.workspace.onLayoutReady(() => {
 			if (!patchEditor()) {
-				const evt = app.workspace.on("file-open", () => {
+				const evt = this.app.workspace.on("file-open", () => {
 					setTimeout(() => {
-						patchEditor() && app.workspace.offref(evt);
+						patchEditor() && this.app.workspace.offref(evt);
 					}, 100);
 				});
 				this.registerEvent(evt);

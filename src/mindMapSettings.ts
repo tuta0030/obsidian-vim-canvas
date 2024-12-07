@@ -9,7 +9,7 @@ function supportModifierKey() {
 
 }
 
-export interface vimCanvasSettings {
+export interface MindMapSettings {
 	navigate: {
 		useNavigate: boolean;
 		modifierKey: string[];
@@ -32,7 +32,7 @@ export interface vimCanvasSettings {
 }
 
 
-export const DEFAULT_SETTINGS: vimCanvasSettings = {
+export const DEFAULT_SETTINGS: MindMapSettings = {
 	navigate: {
 		useNavigate: true,
 		modifierKey: ['Alt'],
@@ -54,7 +54,7 @@ export const DEFAULT_SETTINGS: vimCanvasSettings = {
 	}
 };
 
-export class vimCanvasSettingTab extends PluginSettingTab {
+export class MindMapSettingTab extends PluginSettingTab {
 	plugin: VimCanvas;
 
 	updateSettings(key: any, value: any): void {
@@ -102,7 +102,7 @@ export class vimCanvasSettingTab extends PluginSettingTab {
 			});
 	}
 
-	useNavigateHotkeySetting(containerEl: HTMLElement, setting: vimCanvasSettings) {
+	useNavigateHotkeySetting(containerEl: HTMLElement, setting: MindMapSettings) {
 		new Setting(containerEl)
 			.setName('Use Navigate Hotkey')
 			.setDesc('Use the hotkey to navigate the mind map')
@@ -118,7 +118,7 @@ export class vimCanvasSettingTab extends PluginSettingTab {
 			});
 	}
 
-	private createHotkeySetting(containerEl: HTMLElement, setting: vimCanvasSettings) {
+	private createHotkeySetting(containerEl: HTMLElement, setting: MindMapSettings) {
 		new Setting(containerEl)
 			.setName('Create Float')
 			.setDesc('Create a float node')
