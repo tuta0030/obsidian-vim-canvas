@@ -15,27 +15,8 @@ import {
 	vimCanvasSettingTab,
 } from "./vimCanvasSettings";
 import { CanvasEdgeData } from "obsidian/canvas";
+import {vimCommandPalette} from "./vimCommandPalette";
 
-function isKeyRelevant(
-	// document: HTMLDocument,
-	event: KeyboardEvent,
-	isSuggesting: boolean
-) {
-	if (!document.activeElement || !event.ctrlKey) {
-		return false;
-	}
-
-	const el = document.activeElement;
-	const isInOmniSearch = el.closest(".omnisearch-modal");
-	const isInAutoCompleteFile = el.closest(".cm-content");
-	// The OmniSearch plugin already maps Ctrl-J and Ctrl-K
-	return (
-		(!isInOmniSearch && el.hasClass("prompt-input")) ||
-			isInAutoCompleteFile ||
-			isSuggesting,
-		event
-	);
-}
 
 const createEdge = async (
 	node1: CanvasNode,
@@ -373,37 +354,7 @@ export default class VimCanvas extends Plugin {
 	onunload() {}
 
 	vimCommandPalette() {
-		document.addEventListener("keydown", (e) => {
-			const isKeyRelevantValues = isKeyRelevant(
-				e,
-				this.app.workspace.editorSuggest.currentSuggest
-			);
-			if (isKeyRelevantValues) {
-				const key = isKeyRelevantValues.key;
-				// console.log(key);
-				switch (key) {
-					case "j":
-						e.preventDefault();
-						document.dispatchEvent(
-							new KeyboardEvent("keydown", {
-								key: "ArrowDown",
-								code: "ArrowDown",
-							})
-						);
-						break;
-					case "k":
-						e.preventDefault();
-						document.dispatchEvent(
-							new KeyboardEvent("keydown", {
-								key: "ArrowUp",
-								code: "ArrowUp",
-							})
-						);
-						break;
-
-				}
-			}
-		});
+		vimCommandPalette(this.app);
 	}
 
 	async registerSettings() {
@@ -596,10 +547,12 @@ export default class VimCanvas extends Plugin {
 			const canvasView = this.app.workspace
 				.getLeavesOfType("canvas")
 				.first()?.view;
+			if (!canvasView) return false;
 			// @ts-ignore
+			// const canvas = canvasView?.canvas;
 			const canvas = canvasView?.canvas;
 
-			if (!canvasView) return false;
+
 			const patchCanvasView = canvas.constructor;
 
 			const canvasViewunistaller = around(

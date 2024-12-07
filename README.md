@@ -1,31 +1,27 @@
-# Canvas MindMap
+# VIM canvas and Command Palette
 
 ## Usage
 
 1. Install the plugin
-2. Create a new canvas
-3. Create a node in the empty canvas
-4. Select the node and the press `Tab` to create a child node (You need to exit edit mode first by pressing `Escape`)
-5. Select the child node and press `Enter` to create a brother node
-6. Done, you get a mindmap.
+2. Diasble Ctrl K or Ctrk J for other keyboard shortcuts
+3. Open command palette to use Ctrl J/K to navigate
+4. Open canvas to use these following shortcuts
+    - Press `Enter` to create brother card;
+    - Press `Tab` to create child card;
+    - Press `HJKL` to move between card;
+    - Press `Shift` + `HJKL` to select multiple card;
+    - Press `Alt` + `HJKL` to move selected cards around;
+    - Press `Shift` + `s` to scale card up;
+    - Press `Ctrl` + `s` to scale card down;
+    - Press `Shift` + `z` to zoom out canvas;
+    - Press `Ctrl` + `Enter` to edit card when `Space` is not working; (This shortcut temprarily disable VIM mod to enter edit mode properly)
+    - Press `Cmd / Ctrl` + `←/→/↓/↑` to create floating nodes;
+    - Press `Cmd / Ctrl` + `Shift` + `←/→/↓/↑` to create child nodes;
+
 
 ## Features
 
-- Auto layout for specific direction
-- Select node's tree
-- Change color for node's edges
-
-### Hotkeys
-
-- Press `Enter` to create brother card; (You can change this hotkey in setting)
-- Press `Tab` to create child card;
-- Press `HJKL` to move between nodes;
-- Press `Alt` + `HJKL` to move nodes around;
-- Press `Shift` + `s` to scale node up;
-- Press `Ctrl` + `s` to scale node down;
-- Press `Shift` + `z` to zoom out canvas;
-- Press `Cmd / Ctrl` + `←/→/↓/↑` to create floating nodes;
-- Press `Cmd / Ctrl` + `Shift` + `←/→/↓/↑` to create child nodes;
+- Vim keybindings for command palette and canvas navigation
 
 ### Commands
 
@@ -35,12 +31,7 @@
 - Open changelog
 - Enter/exit edit mode
 
-### Showcase
-
-![showcase](https://raw.githubusercontent.com/Quorafind/obsidian-canvas-mindmap/master/showcase.gif)
 
 ## How to Install
 
-- Obsidian: [Available on Obsidian Plugin Market](https://obsidian.md/plugins?id=canvas-mindmap)
-- BRAT: Add `quorafind/canvas-mindmap` to BRAT.
-- Manual: Download the latest release. Extract and put the three files (main.js, manifest.json, styles.css) to `{{obsidian_vault}}/.obsidian/plugins/obsidian-canvas-mindmap`.
+- Manual: Download the latest release. Extract and put the three files (main.js, manifest.json, styles.css) to `{{obsidian_vault}}/.obsidian/plugins/vim-canvas-and-command-palette`.
