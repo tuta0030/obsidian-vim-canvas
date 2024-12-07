@@ -1,4 +1,4 @@
-import { App, debounce, Platform, PluginSettingTab, Setting } from "obsidian";
+import { App, debounce, PluginSettingTab, Setting } from "obsidian";
 import VimCanvas from "./vimCanvasAndCommandPalette";
 
 type ModifierKey = 'Alt' | 'Mod' | 'Shift';
