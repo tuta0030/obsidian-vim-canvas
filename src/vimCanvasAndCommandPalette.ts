@@ -1,11 +1,5 @@
 import { App, CanvasNode, Plugin, TFile, ItemView, Canvas } from "obsidian";
 import { around } from "monkey-around";
-import { createChildFileNode } from "./utils";
-import {
-	DEFAULT_SETTINGS,
-	vimCanvasSettings,
-	vimCanvasSettingTab,
-} from "./vimCanvasSettings";
 import {
 	createSiblingNode,
 	createChildNode,

@@ -4,6 +4,7 @@ export const vimCommandPalette = (app: App) => {
 		document.addEventListener("keydown", (e) => {
 			const isKeyRelevantValues = isKeyRelevant(
 				e,
+				//@ts-ignore
 				app.workspace.editorSuggest.currentSuggest
 			);
 			if (isKeyRelevantValues) {
