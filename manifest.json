@@ -1,15 +1,15 @@
 {
-	"id": "canvas-mindmap",
-	"name": "Canvas Mindmap",
-	"version": "1.0.2",
-	"minAppVersion": "1.4.0",
-	"description": "A plugin to make your canvas work like a mindmap.",
-	"author": "Boninall",
-	"authorUrl": "https://github.com/quorafind",
+	"id": "vim-canvas-and-command-palette",
+	"name": "vim-canvas-and-command-palette",
+	"version": "1.0.0",
+	"minAppVersion": "1.0.0",
+	"description": "Vim like canvas and command palette",
+	"author": "tuta0030",
+	"authorUrl": "https://github.com/tuta0030",
 	"fundingUrl": {
-		"Buy Me a Coffee": "https://www.buymeacoffee.com/boninall",
-		"爱发电": "https://afdian.net/a/boninall",
-		"支付宝": "https://cdn.jsdelivr.net/gh/Quorafind/.github@main/IMAGE/%E6%94%AF%E4%BB%98%E5%AE%9D%E4%BB%98%E6%AC%BE%E7%A0%81.jpg"
+		"Buy Me a Coffee": "buymeacoffee.com/tuta0030",
+		"爱发电": "https://afdian.com/a/tuta0030",
+		"支付宝": "https://files.catbox.moe/3zhg79.jpg"
 	},
 	"isDesktopOnly": false
 }

@@ -1,5 +1,5 @@
 import { App, debounce, Platform, PluginSettingTab, Setting } from "obsidian";
-import CanvasMindMap from "./canvasMindMap";
+import VimCanvas from "./vimCanvas";
 
 type ModifierKey = 'Alt' | 'Mod' | 'Shift';
 
@@ -55,7 +55,7 @@ export const DEFAULT_SETTINGS: MindMapSettings = {
 };
 
 export class MindMapSettingTab extends PluginSettingTab {
-	plugin: CanvasMindMap;
+	plugin: VimCanvas;
 
 	updateSettings(key: any, value: any): void {
 
@@ -79,7 +79,7 @@ export class MindMapSettingTab extends PluginSettingTab {
 		true,
 	);
 
-	constructor(app: App, plugin: CanvasMindMap) {
+	constructor(app: App, plugin: VimCanvas) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -98,7 +98,7 @@ export class MindMapSettingTab extends PluginSettingTab {
 			.setName('Donate')
 			.setDesc('If you like this plugin, consider donating to support continued development:')
 			.addButton((bt) => {
-				bt.buttonEl.outerHTML = `<a href="buymeacoffee.com/PQOHXqj"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=PQOHXqj&button_colour=6495ED&font_colour=ffffff&font_family=Inter&outline_colour=000000&coffee_colour=FFDD00"></a>`;
+				bt.buttonEl.outerHTML = `<a href="buymeacoffee.com/PQOHXqj"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=tuta0030&button_colour=6495ED&font_colour=ffffff&font_family=Inter&outline_colour=000000&coffee_colour=FFDD00"></a>`;
 			});
 	}
 
@@ -116,21 +116,6 @@ export class MindMapSettingTab extends PluginSettingTab {
 					}, 700);
 				});
 			});
-
-		// if (setting.navigate.useNavigate) {
-		// 	new Setting(containerEl)
-		// 		.setName('Modifier Key')
-		// 		.setDesc('The modifier key to use with the hotkey')
-		// 		.addDropdown((dropdown) => {
-		// 			const mods = supportModifierKey();
-		// 			dropdown.addOption('None', 'None');
-		// 			dropdown.setValue(setting.navigate.modifierKey[0]);
-		// 			dropdown.onChange((value) => {
-		// 				this.updateSettings('navigate.modifierKey.0', value);
-		// 			});
-		// 		});
-		// }
-
 	}
 
 	private createHotkeySetting(containerEl: HTMLElement, setting: MindMapSettings) {
@@ -143,41 +128,5 @@ export class MindMapSettingTab extends PluginSettingTab {
 					this.updateSettings('create.createFloat', value);
 				});
 			});
-		//
-		// new Setting(containerEl)
-		// 	.setName('Child Direction')
-		// 	.setDesc('The direction of the child node')
-		// 	.addDropdown((dropdown) => {
-		// 		dropdown.addOption('Right', 'right');
-		// 		dropdown.addOption('Left', 'left');
-		// 		dropdown.addOption('Up', 'up');
-		// 		dropdown.addOption('Down', 'down');
-		// 		dropdown.setValue(setting.create.childDirection);
-		// 		dropdown.onChange((value) => {
-		// 			this.updateSettings('create.childDirection', value);
-		// 		});
-		// 	});
-		//
-		// new Setting(containerEl)
-		// 	.setName('Sibling Width')
-		// 	.setDesc('The width of the sibling node')
-		// 	.addSlider((slider) => {
-		// 		slider.setLimits(100, 500, 10);
-		// 		slider.setValue(setting.create.siblingWidth);
-		// 		slider.onChange((value) => {
-		// 			this.updateSettings('create.siblingWidth', value);
-		// 		});
-		// 	});
-		//
-		// new Setting(containerEl)
-		// 	.setName('Sibling Height')
-		// 	.setDesc('The height of the sibling node')
-		// 	.addSlider((slider) => {
-		// 		slider.setLimits(50, 300, 10);
-		// 		slider.setValue(setting.create.siblingHeight);
-		// 		slider.onChange((value) => {
-		// 			this.updateSettings('create.siblingHeight', value);
-		// 		});
-		// 	});
 	}
 }

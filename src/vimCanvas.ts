@@ -1,8 +1,15 @@
 import {
+	App,
+	Editor,
+	MarkdownView,
+	Modal,
+	Notice,
+	PluginSettingTab,
+	Setting,
 	Canvas,
 	CanvasEdge,
 	CanvasNode,
-	ItemView,
+	// ItemView,
 	Plugin,
 	requireApiVersion,
 	SettingTab,
@@ -12,7 +19,6 @@ import { around } from "monkey-around";
 import {
 	addEdge,
 	addNode,
-	buildTrees,
 	createChildFileNode,
 	random,
 } from "./utils";
@@ -20,10 +26,10 @@ import {
 	DEFAULT_SETTINGS,
 	MindMapSettings,
 	MindMapSettingTab,
-} from "./mindMapSettings";
+} from "./vimCanvasSettings";
 import { CanvasEdgeData } from "obsidian/canvas";
 
-const createEdge = async (node1: any, node2: any, canvas: any) => {
+const createEdge = async (node1: CanvasNode, node2: CanvasNode, canvas: Canvas) => {
 	addEdge(
 		canvas,
 		random(16),
@@ -42,11 +48,11 @@ const createEdge = async (node1: any, node2: any, canvas: any) => {
 
 // Global Variable for multiple selection with navigation
 let lastNode: CanvasNode;
-const newNavigate = (canvas: Canvas, direction: "h" | "j" | "k" | "l") => {
+const navigateNode = (canvas: Canvas, direction: "h" | "j" | "k" | "l") => {
 	let lastNodeSet: Set<CanvasNode> = new Set();
 	if (lastNode) {
 		lastNodeSet.add(lastNode);
-	};
+	}
 	let currentSelection = lastNode ? lastNodeSet : canvas.selection;
 
 	// Check if the selected node is editing
@@ -334,7 +340,7 @@ const createSiblingNode = async (canvas: Canvas, ignored: boolean) => {
 	return newChildNode;
 };
 
-export default class CanvasMindMap extends Plugin {
+export default class VimCanvas extends Plugin {
 	settings: MindMapSettings;
 	settingTab: MindMapSettingTab;
 
@@ -589,7 +595,7 @@ export default class CanvasMindMap extends Plugin {
 										this.canvas.selection;
 									if (!currentSelection.isEditing) {
 										selectNextNode(
-											newNavigate(this.canvas, direction)
+											navigateNode(this.canvas, direction)
 										);
 									}
 								};
@@ -676,7 +682,7 @@ export default class CanvasMindMap extends Plugin {
 								["Shift"],
 								"h",
 								async (ev: KeyboardEvent) => {
-									const node = await newNavigate(
+									const node = await navigateNode(
 										this.canvas,
 										"h"
 									);
@@ -688,7 +694,7 @@ export default class CanvasMindMap extends Plugin {
 								["Shift"],
 								"j",
 								async (ev: KeyboardEvent) => {
-									const node = await newNavigate(
+									const node = await navigateNode(
 										this.canvas,
 										"j"
 									);
@@ -700,7 +706,7 @@ export default class CanvasMindMap extends Plugin {
 								["Shift"],
 								"k",
 								async (ev: KeyboardEvent) => {
-									const node = await newNavigate(
+									const node = await navigateNode(
 										this.canvas,
 										"k"
 									);
@@ -712,7 +718,7 @@ export default class CanvasMindMap extends Plugin {
 								["Shift"],
 								"l",
 								async (ev: KeyboardEvent) => {
-									const node = await newNavigate(
+									const node = await navigateNode(
 										this.canvas,
 										"l"
 									);
@@ -766,7 +772,6 @@ export default class CanvasMindMap extends Plugin {
 											.values()
 											.next().value;
 									let vimState = app.isVimEnabled();
-									// console.log("vimState", vimState);
 
 									if (vimState) {
 										app.vault.setConfig("vimMode", false);
@@ -937,7 +942,7 @@ export default class CanvasMindMap extends Plugin {
 			this.register(canvasViewunistaller);
 
 			canvas?.view.leaf.rebuildView();
-			console.log("Obsidian-Canvas-MindMap: canvas view patched");
+			// console.log("Obsidian-Canvas-MindMap: canvas view patched");
 			return true;
 		};
 
@@ -984,7 +989,7 @@ export default class CanvasMindMap extends Plugin {
 			});
 			this.register(uninstaller);
 
-			console.log("Obsidian-Canvas-MindMap: canvas node patched");
+			// console.log("Obsidian-Canvas-MindMap: canvas node patched");
 			return true;
 		};
 
@@ -1002,7 +1007,7 @@ export default class CanvasMindMap extends Plugin {
 		const patchEditor = () => {
 			const editorInfo = app.workspace.activeEditor;
 
-			console.log(editorInfo);
+			// console.log(editorInfo);
 			if (!editorInfo) return false;
 			if (
 				!editorInfo ||
@@ -1025,7 +1030,7 @@ export default class CanvasMindMap extends Plugin {
 			});
 			this.register(uninstaller);
 
-			console.log("Obsidian-Canvas-MindMap: markdown file info patched");
+			// console.log("Obsidian-Canvas-MindMap: markdown file info patched");
 			return true;
 		};
 

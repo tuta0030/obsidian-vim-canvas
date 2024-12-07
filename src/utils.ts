@@ -12,6 +12,7 @@ interface TreeNode {
 	children: TreeNode[];
 }
 
+
 export const random = (e: number) => {
 	let t = [];
 	for (let n = 0; n < e; n++) {
