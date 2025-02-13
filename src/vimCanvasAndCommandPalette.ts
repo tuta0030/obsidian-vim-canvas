@@ -1,28 +1,17 @@
-import { App, CanvasNode, Plugin, TFile, ItemView, Canvas } from "obsidian";
-import { around } from "monkey-around";
-import {
-	createSiblingNode,
-	createChildNode,
-	createFloatingNode,
-} from "./createEdgeAndNodes";
-import { navigateNode } from "./navigateNode";
-import { selectNextNode, selectNextNodeAndCurrent } from "./selectNodes";
+import { App, Plugin, Canvas } from "obsidian";
 import { vimCommandPalette } from "./vimCommandPalette";
-import { hjklNavigate, hjklMoveNode } from "./shortCuts";
+import { vimCanvasNavigate} from "./vimCanvasNavigate";
 
 
 export default class VimCanvas extends Plugin {
 	app: App;
 
 	async onload() {
-		this.vimCommandPalette();
+		vimCommandPalette(this.app);
+		this.app.workspace.onLayoutReady(() => {
+			vimCanvasNavigate(this.app);
+		});
 	}
 
 	onunload() {}
-
-	vimCommandPalette() {
-		vimCommandPalette(this.app);
-	}
-
-
 }
