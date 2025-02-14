@@ -15,8 +15,8 @@ function isVimEnabled(app: App): boolean {
 // start the vim canvas function
 // get canvas object
 export function getCanvas(app: App):Canvas | void {
-	console.log("Canvas status:",isCanvas(app));
-	console.log("Vim status:",isVimEnabled(app));
+	// console.log("Canvas status:",isCanvas(app));
+	// console.log("Vim status:",isVimEnabled(app));
 	if (isCanvas(app) && isVimEnabled(app)) {
 		// @ts-ignore
 		const canvas = app.workspace.getActiveFileView().canvas;
