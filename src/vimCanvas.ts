@@ -1,4 +1,4 @@
-import { App, Plugin, Canvas, CanvasNode } from "obsidian";
+import { App, Plugin, Canvas, CanvasNode, Modifier } from "obsidian";
 import { vimCommandPalette } from "./vimCommandPalette";
 import { refocusNode } from "./vimCanvasReFocusNode";
 import { navigateNode } from "./vimCanvasNavigateNode";
@@ -7,14 +7,9 @@ import { getCanvas } from "./vimCanvasGetCanvas";
 const MAX_HISTORY = 100;
 
 function selectAndZoom(canvas: Canvas, node: CanvasNode, deselect = true) {
-	if (deselect) {
-		canvas.deselectAll();
-		canvas.select(node);
-		canvas.zoomToSelection();
-	} else {
-		canvas.select(node);
-		canvas.zoomToSelection();
-	}
+    deselect && canvas.deselectAll();
+    canvas.select(node);
+    canvas.zoomToSelection();
 }
 
 export default class VimCanvas extends Plugin {
@@ -30,81 +25,80 @@ export default class VimCanvas extends Plugin {
         return canvas;
     }
 
-    async onload() {
-        // 重构后的重聚焦命令
+    private addToHistory(node: CanvasNode) {
+        const startIdx = Math.max(0, this.lastNode.length - MAX_HISTORY + 1);
+        this.lastNode = [...this.lastNode.slice(startIdx), node];
+    }
+
+    private createNavigationCommand(
+        key: 'h' | 'j' | 'k' | 'l',
+        useDeselect: boolean,
+        modifiers: Modifier[] = []
+    ) {
         this.addCommand({
-            id: 'refocus-canvas-node',
-            name: 'Refocus canvas node',
+            id: `nav-${modifiers.join('-')}-${key}`,
+            name: `Navigate ${key.toUpperCase()}${useDeselect ? '' : ' (multi)'}`,
             callback: () => {
-                const lastNode = refocusNode(this.app);
-                if (lastNode) {
-                    this.lastNode = [
-                        ...this.lastNode.slice(-MAX_HISTORY + 1), 
-                        lastNode
-                    ];
+                const canvas = this.getValidCanvas();
+                const currentNode = this.lastNode.at(-1);
+                if (!canvas || !currentNode) return;
+
+                const newNode = navigateNode(currentNode, canvas, key);
+                if (!newNode) {
+                    console.debug(`Navigation failed: ${key}`);
+                    return;
                 }
+
+                this.addToHistory(newNode);
+                selectAndZoom(canvas, newNode, useDeselect);
             },
-            hotkeys: [{ modifiers: [], key: "r" }]
+            hotkeys: [{ modifiers, key }]
         });
+    }
 
-        // 优化后的导航命令
-        (['h', 'j', 'k', 'l'] as const).forEach((key) => {
-            this.addCommand({
-                id: `navigate-${key}`,
-                name: `Navigate ${key.toUpperCase()}`,
-                callback: () => {
-                    const canvas = this.getValidCanvas();
-                    const currentNode = this.lastNode.at(-1);
-                    
-                    if (!canvas || !currentNode) return;
+    async onload() {
+        this.addCommand({
+			id: "refocus-canvas-node",
+			name: "Refocus canvas node",
+			callback: () => {
+				const lastNode = refocusNode(this.app);
+				lastNode && this.addToHistory(lastNode);
+			},
+			hotkeys: [{ modifiers: [], key: "r" }],
+		});
 
-                    const newNode = navigateNode(currentNode, canvas, key);
-                    if (!newNode) {
-                        console.debug(`Navigation failed for key: ${key}`);
-                        return;
-                    }
+		(["h", "j", "k", "l"] as const).forEach((key) => {
+			this.createNavigationCommand(key, true, []); // 单节点选择
+			this.createNavigationCommand(key, false, ["Shift"]); // 多节点选择
+			this.addCommand({
+				id: `move nodes ${key}`,
+				name: `Move nodes ${key}`,
+				callback: () => {
+					const canvas = this.getValidCanvas();
+					const currentSelection = canvas?.selection;
+					currentSelection?.forEach((node) => {
+						const moveStep = 5; // 移动步长可调整
+						switch (key) {
+							case "h":
+								node.moveAndResize(node.x - moveStep, node.y);
+								break;
+							case "j":
+								node.moveAndResize(node.x, node.y + moveStep);
+								break;
+							case "k":
+								node.moveAndResize(node.x, node.y - moveStep);
+								break;
+							case "l":
+								node.moveAndResize(node.x + moveStep, node.y);
+								break;
+						}
+					});
+				},
+				hotkeys: [{ modifiers: ["Alt"], key }],
+			});
+		});
 
-                    this.lastNode = [
-                        ...this.lastNode.slice(-MAX_HISTORY + 1), 
-                        newNode
-                    ];
-                    selectAndZoom(canvas, newNode, false);
-                },
-                hotkeys: [{ modifiers: ["Shift"], key }],
-            });
-        });
-
-
-        // select multiple nodes command
-        (['h', 'j', 'k', 'l'] as const).forEach((key) => {
-            this.addCommand({
-                id: `add-selection-${key}`,
-                name: `Add Selection ${key.toUpperCase()}`,
-                callback: () => {
-                    const canvas = this.getValidCanvas();
-                    const currentNode = this.lastNode.at(-1);
-                    
-                    if (!canvas || !currentNode) return;
-
-                    const newNode = navigateNode(currentNode, canvas, key);
-                    if (!newNode) {
-                        console.debug(`Navigation failed for key: ${key}`);
-                        return;
-                    }
-
-                    this.lastNode = [
-                        ...this.lastNode.slice(-MAX_HISTORY + 1), 
-                        newNode
-                    ];
-                    selectAndZoom(canvas, newNode);
-                },
-                hotkeys: [{ modifiers: [], key }],
-            });
-        });
-
-        this.app.workspace.onLayoutReady(() => {
-            vimCommandPalette(this.app);
-        });
+        this.app.workspace.onLayoutReady(() => vimCommandPalette(this.app));
     }
 
     onunload() {}
