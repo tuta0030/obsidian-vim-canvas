@@ -1,9 +1,9 @@
 {
-	"id": "vim-canvas-and-command-palette",
-	"name": "vim-canvas-and-command-palette",
+	"id": "vim-canvas",
+	"name": "Vim Canvas",
 	"version": "1.0.0",
 	"minAppVersion": "1.0.0",
-	"description": "Vim like canvas and command palette",
+	"description": "vim keybindings for canvas and command palette",
 	"author": "tuta0030",
 	"authorUrl": "https://github.com/tuta0030",
 	"fundingUrl": {

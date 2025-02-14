@@ -6,6 +6,7 @@ export const vimCommandPalette = (app: App) => {
 	document.addEventListener("keydown", (e) => {
 		const isKeyRelevantValues = isKeyRelevant(
 			e,
+			// TODO: use getLeaf instead of activeLeaf
 			//@ts-ignore
 			app.workspace.activeLeaf?.getViewState().title == "Search",
 			//@ts-ignore

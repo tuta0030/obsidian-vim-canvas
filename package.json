@@ -1,5 +1,5 @@
 {
-	"name": "vim-canvas-and-command-palette",
+	"name": "obsidian-vim-canvas",
 	"version": "1.0.0",
 	"description": "vim keybindings for canvas and command palette",
 	"main": "main.js",

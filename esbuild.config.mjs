@@ -15,7 +15,7 @@ esbuild.build({
 	banner: {
 		js: banner,
 	},
-	entryPoints: ['src/vimCanvasAndCommandPalette.ts'],
+	entryPoints: ['src/vimCanvas.ts'],
 	bundle: true,
 	external: [
 		'obsidian',
