@@ -4,11 +4,11 @@ import { getCanvas } from "./vimCanvasGetCanvas";
 import { createEdgeForNode } from "./vimCanvasCreateEdge"
 
 // function to create a node
+// FIXME: 创建节点后，不要立即进入编辑模式
 export async function createNode(
 	app: App,
 	below = true,
 	above = false,
-	lastNode: CanvasNode | undefined = undefined,
 	{ x = 100, y = 100 }: { x?: number; y?: number } = {},
 	{ width = 200, height = 50 }: { width?: number; height?: number } = {},
 ) {
@@ -56,13 +56,22 @@ export async function createNode(
 					height: firstInSelection.height,
 				}, // 设置默认尺寸
 			});
+
+			// 强制退出编辑模式
+			requestAnimationFrame(() => {
+				if (newNode.isEditing) {
+					// @ts-ignore
+					newNode.exitEditing(); // Obsidian 私有 API
+					newNode.setData({ content: "" }); // 清空内容防止残留
+				}
+			});
+
 			if (!canvas) return;
 			// 添加边之前验证节点
 			if (!newNode?.id) {
 				console.error("Node creation failed");
 				return;
 			}
-
 			// 添加边操作也需要异步处理
 			requestAnimationFrame(() => {
 				createEdgeForNode(

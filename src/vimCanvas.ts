@@ -8,6 +8,7 @@ import { startContinuousMove, stopContinuousMove } from "./vimCanvasMoveNodes";
 
 const MAX_HISTORY = 100;
 
+
 async function selectAndZoom(canvas: Canvas, node: CanvasNode, deselect = true) {
 	deselect && canvas.deselectAll();
 
@@ -69,6 +70,7 @@ export default class VimCanvas extends Plugin {
 				useDeselect ? "" : " (multi)"
 			}`,
 			callback: () => {
+                if (this.isEditing()) return;
 				const canvas = this.getValidCanvas();
 				const currentNode = this.lastNode.at(-1);
 				if (!canvas || !currentNode) return;
@@ -85,6 +87,14 @@ export default class VimCanvas extends Plugin {
 			hotkeys: [{ modifiers: sortedModifiers, key }],
 		});
 	}
+    private isEditing(): boolean {
+        const canvas = getCanvas(this.app);
+        if (!canvas) return false;
+
+        // 检测所有选中节点
+        // @ts-ignore
+        return Array.from(canvas.selection).some((node) => node.isEditing);
+    }
 
 	private createCreateNodeCommand(
 		key: "tab" | "enter",
@@ -99,11 +109,14 @@ export default class VimCanvas extends Plugin {
 				useDeselect ? "" : " (multi)"
 			}`,
 			callback: async () => {
+                if (this.isEditing()) return;
 				console.log(`current key is ${keyCombo}`);
 				const canvas = getCanvas(this.app);
 				if (!canvas) return;
 				const currentNode = this.lastNode.at(-1);
 				if (!canvas || !currentNode) return;
+                // @ts-ignore
+                if (currentNode.isEditing) return;
 
 				switch (keyCombo) {
 					case "enter":
@@ -139,11 +152,29 @@ export default class VimCanvas extends Plugin {
 	}
 
 	async onload() {
+        // TODO: 所有的快捷键，
+        // 都会在编辑节点的时候导致无法输入对应的字符，需要修复这些问题
+        // Use space to enter edit mode for selected node
+		this.addCommand({
+			id: "edit-canvas-node",
+			name: "Edit Canvas node",
+			callback: () => {
+                if (this.isEditing()) return;
+                const canvas = getCanvas(this.app);
+                if(!canvas) return;
+				const currentSelection = canvas.selection;
+				const currentNode = currentSelection.values().next().value;
+                if (currentNode.isEditing) return;
+                currentNode.startEditing();
+			},
+			hotkeys: [{ modifiers: [], key: "space" }],
+		});
 		// Refocus canvas node
 		this.addCommand({
 			id: "refocus-canvas-node",
 			name: "Refocus canvas node",
 			callback: () => {
+                if (this.isEditing()) return;
 				const lastNode = refocusNode(this.app);
 				lastNode && this.addToHistory(lastNode);
 			},
@@ -154,6 +185,7 @@ export default class VimCanvas extends Plugin {
 			id: "delete-canvas-node",
 			name: "Delete canvas node",
 			callback: () => {
+                if (this.isEditing()) return;
 				const canvas = this.getValidCanvas();
 				if (!canvas) return;
 				const currentSelection = canvas.selection;
