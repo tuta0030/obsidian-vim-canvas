@@ -15,6 +15,9 @@ function selectAndZoom(canvas: Canvas, node: CanvasNode, deselect = true) {
 export default class VimCanvas extends Plugin {
     app: App;
     private lastNode: CanvasNode[] = [];
+    private moveInterval?: number;
+    private currentKey?: string;
+    private isAltPressed = false;
     
     private getValidCanvas(): Canvas | null {
         const canvas = getCanvas(this.app);
@@ -26,8 +29,10 @@ export default class VimCanvas extends Plugin {
     }
 
     private addToHistory(node: CanvasNode) {
-        const startIdx = Math.max(0, this.lastNode.length - MAX_HISTORY + 1);
-        this.lastNode = [...this.lastNode.slice(startIdx), node];
+        if (this.lastNode.length >= MAX_HISTORY) {
+            this.lastNode.shift();
+        }
+        this.lastNode.push(node);
     }
 
     private createNavigationCommand(
@@ -35,8 +40,9 @@ export default class VimCanvas extends Plugin {
         useDeselect: boolean,
         modifiers: Modifier[] = []
     ) {
+        const sortedModifiers = [...modifiers].sort() as Modifier[];
         this.addCommand({
-            id: `nav-${modifiers.join('-')}-${key}`,
+            id: `nav-${sortedModifiers.join('-')}-${key}`,
             name: `Navigate ${key.toUpperCase()}${useDeselect ? '' : ' (multi)'}`,
             callback: () => {
                 const canvas = this.getValidCanvas();
@@ -52,54 +58,85 @@ export default class VimCanvas extends Plugin {
                 this.addToHistory(newNode);
                 selectAndZoom(canvas, newNode, useDeselect);
             },
-            hotkeys: [{ modifiers, key }]
+            hotkeys: [{ modifiers: sortedModifiers, key }]
         });
     }
 
     async onload() {
         this.addCommand({
-			id: "refocus-canvas-node",
-			name: "Refocus canvas node",
-			callback: () => {
-				const lastNode = refocusNode(this.app);
-				lastNode && this.addToHistory(lastNode);
-			},
-			hotkeys: [{ modifiers: [], key: "r" }],
-		});
+            id: "refocus-canvas-node",
+            name: "Refocus canvas node",
+            callback: () => {
+                const lastNode = refocusNode(this.app);
+                lastNode && this.addToHistory(lastNode);
+            },
+            hotkeys: [{ modifiers: [], key: "r" }],
+        });
 
-		(["h", "j", "k", "l"] as const).forEach((key) => {
-			this.createNavigationCommand(key, true, []); // 单节点选择
-			this.createNavigationCommand(key, false, ["Shift"]); // 多节点选择
-			this.addCommand({
-				id: `move nodes ${key}`,
-				name: `Move nodes ${key}`,
-				callback: () => {
-					const canvas = this.getValidCanvas();
-					const currentSelection = canvas?.selection;
-					currentSelection?.forEach((node) => {
-						const moveStep = 5; // 移动步长可调整
-						switch (key) {
-							case "h":
-								node.moveAndResize(node.x - moveStep, node.y);
-								break;
-							case "j":
-								node.moveAndResize(node.x, node.y + moveStep);
-								break;
-							case "k":
-								node.moveAndResize(node.x, node.y - moveStep);
-								break;
-							case "l":
-								node.moveAndResize(node.x + moveStep, node.y);
-								break;
-						}
-					});
-				},
-				hotkeys: [{ modifiers: ["Alt"], key }],
-			});
-		});
+        (["h", "j", "k", "l"] as const).forEach((key) => {
+            this.createNavigationCommand(key, true, []);
+            this.createNavigationCommand(key, false, ["Shift"]);
+        });
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.altKey && ["h","j","k","l"].includes(e.key.toLowerCase())) {
+                e.preventDefault();
+                this.isAltPressed = true;
+                const currentKey = e.key.toLowerCase();
+                this.currentKey = currentKey;
+                this.startContinuousMove(currentKey);
+            }
+        };
+
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (!e.altKey || ["h","j","k","l"].includes(e.key.toLowerCase())) {
+                this.stopContinuousMove();
+            }
+        };
+
+        this.registerDomEvent(document, 'keydown', handleKeyDown);
+        this.registerDomEvent(document, 'keyup', handleKeyUp);
 
         this.app.workspace.onLayoutReady(() => vimCommandPalette(this.app));
     }
 
-    onunload() {}
+    private startContinuousMove(currentKey: string) {
+        if (this.moveInterval) return;
+        
+        const moveStep = 10;
+        this.moveInterval = window.setInterval(() => {
+            const canvas = this.getValidCanvas();
+            const currentSelection = canvas?.selection;
+            if (!currentSelection) return;
+
+            currentSelection.forEach(node => {
+                const { x, y } = node;
+                const newPos = {
+                    h: { x: x - moveStep, y },
+                    j: { x, y: y + moveStep },
+                    k: { x, y: y - moveStep },
+                    l: { x: x + moveStep, y }
+                }[currentKey];
+
+                if (newPos === undefined) return;
+                node.moveTo(newPos);
+            });
+
+            canvas?.requestSave();
+        }, 50);
+    }
+
+    private stopContinuousMove() {
+        if (this.moveInterval) {
+            clearInterval(this.moveInterval);
+            this.moveInterval = undefined;
+            this.currentKey = undefined;
+            this.isAltPressed = false;
+        }
+    }
+
+    onunload() {
+        (vimCommandPalette(this.app) as unknown as { unload?: () => void })?.unload?.();
+        this.stopContinuousMove();
+    }
 }
