@@ -1,8 +1,11 @@
 import { App, Plugin, Canvas, CanvasNode, Modifier } from "obsidian";
 import { vimCommandPalette } from "./vimCommandPalette";
+import { createNode } from "./vimCanvasCreateNode"
 import { refocusNode } from "./vimCanvasReFocusNode";
 import { navigateNode } from "./vimCanvasNavigateNode";
 import { getCanvas } from "./vimCanvasGetCanvas";
+import {startContinuousMove, stopContinuousMove} from "./vimCanvasMoveNodes"
+import { log } from "console";
 
 const MAX_HISTORY = 100;
 
@@ -63,6 +66,7 @@ export default class VimCanvas extends Plugin {
     }
 
     async onload() {
+        // Refocus canvas node
         this.addCommand({
             id: "refocus-canvas-node",
             name: "Refocus canvas node",
@@ -72,25 +76,62 @@ export default class VimCanvas extends Plugin {
             },
             hotkeys: [{ modifiers: [], key: "r" }],
         });
+        // Delete node
+        this.addCommand({
+			id: "delete-canvas-node",
+			name: "Delete canvas node",
+			callback: () => {
+				const canvas = this.getValidCanvas();
+				if (!canvas) return;
+				const currentSelection = canvas.selection;
+				if (currentSelection.values().next().value.isEditing) return;
+				// @ts-ignore
+				canvas.deleteSelection();
+			},
+			hotkeys: [{ modifiers: [], key: "x" }],
+		});
+
+		// Create node
+		// TODO: new node not connected to the last node
+		(["enter", "tab"] as const).forEach((key) => {
+			this.addCommand({
+				id: `create-node-${key}`,
+				name: `Create node (${key.toUpperCase()})`,
+				callback: () => {
+					const canvas = getCanvas(this.app);
+					if (!canvas) return;
+
+					if (key === "enter") {
+						createNode(this.app);
+					} else if (key === "tab") {
+						createNode(this.app, false);
+					}
+				},
+				hotkeys: [{ modifiers: [], key }],
+			});
+		});
 
         (["h", "j", "k", "l"] as const).forEach((key) => {
+            // select one node
             this.createNavigationCommand(key, true, []);
+            // select multiple nodes
             this.createNavigationCommand(key, false, ["Shift"]);
         });
 
+        // move selected nodes
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.altKey && ["h","j","k","l"].includes(e.key.toLowerCase())) {
                 e.preventDefault();
                 this.isAltPressed = true;
                 const currentKey = e.key.toLowerCase();
                 this.currentKey = currentKey;
-                this.startContinuousMove(currentKey);
+                startContinuousMove(this.app, currentKey);
             }
         };
-
+        
         const handleKeyUp = (e: KeyboardEvent) => {
             if (!e.altKey || ["h","j","k","l"].includes(e.key.toLowerCase())) {
-                this.stopContinuousMove();
+                stopContinuousMove();
             }
         };
 
@@ -100,43 +141,8 @@ export default class VimCanvas extends Plugin {
         this.app.workspace.onLayoutReady(() => vimCommandPalette(this.app));
     }
 
-    private startContinuousMove(currentKey: string) {
-        if (this.moveInterval) return;
-        
-        const moveStep = 10;
-        this.moveInterval = window.setInterval(() => {
-            const canvas = this.getValidCanvas();
-            const currentSelection = canvas?.selection;
-            if (!currentSelection) return;
-
-            currentSelection.forEach(node => {
-                const { x, y } = node;
-                const newPos = {
-                    h: { x: x - moveStep, y },
-                    j: { x, y: y + moveStep },
-                    k: { x, y: y - moveStep },
-                    l: { x: x + moveStep, y }
-                }[currentKey];
-
-                if (newPos === undefined) return;
-                node.moveTo(newPos);
-            });
-
-            canvas?.requestSave();
-        }, 50);
-    }
-
-    private stopContinuousMove() {
-        if (this.moveInterval) {
-            clearInterval(this.moveInterval);
-            this.moveInterval = undefined;
-            this.currentKey = undefined;
-            this.isAltPressed = false;
-        }
-    }
-
     onunload() {
         (vimCommandPalette(this.app) as unknown as { unload?: () => void })?.unload?.();
-        this.stopContinuousMove();
+        stopContinuousMove();
     }
 }

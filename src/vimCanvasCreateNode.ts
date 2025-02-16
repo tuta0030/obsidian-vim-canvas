@@ -1,14 +1,17 @@
+import { App, CanvasNode, CanvasEdge} from "obsidian";
 import { error } from "console";
-import { App} from "obsidian";
 import { getCanvas } from "./vimCanvasGetCanvas";
+import { createEdgeForNode } from "./vimCanvasCreateEdge"
 
 // function to create a node
 export function createNode(
 	app: App,
-	{ x = 0, y = 0 }: { x?: number; y?: number } = {},
-	{ width = 300, height = 200 }: { width?: number; height?: number } = {}
+	below = true,
+	lastNode: CanvasNode | undefined = undefined,
+	{ x = 100, y = 100 }: { x?: number; y?: number } = {},
+	{ width = 200, height = 50 }: { width?: number; height?: number } = {},
 ) {
-	const gap = { x, y };
+	const gap = { x: x, y: y };
 	const nodeSize = { width, height };
 	const canvas = getCanvas(app);
 
@@ -18,7 +21,9 @@ export function createNode(
 	}
 
 	const currentSelection = canvas.selection;
-	if (currentSelection.size === 0) {
+	const allNodes = canvas.nodes;
+	// 如果没有选中节点，并且没有节点，则创建一个默认节点
+	if (currentSelection.size === 0 && allNodes.size === 0) {
 		// @ts-ignore
 		canvas.createTextNode({
 			pos: { x: 0, y: 0 }, // 设置初始坐标
@@ -28,15 +33,30 @@ export function createNode(
 				height: (nodeSize.height = 100),
 			}, // 设置默认尺寸
 		});
-	} else if (currentSelection.size !== 0) {
+	} 
+	// 如果选中了节点，则根据 below 的值创建节点
+	else if (currentSelection.size === 1) {
 		const firstInSelection = currentSelection.entries().next().value.first();
-		const x = firstInSelection.x + gap.x;
-		const y = firstInSelection.y + gap.y;
-		// @ts-ignore
-		canvas.createTextNode({
-			pos: { x: x, y: y }, // 设置初始坐标
-			text: "", // 节点默认文本
-			size: { width: nodeSize.width, height: nodeSize.height }, // 设置默认尺寸
-		});
+		function _createTextNode(x:number, y:number) {
+			// @ts-ignore
+			const newNode = canvas.createTextNode({
+				pos: { x: x, y: y },
+				text: "",
+				size: { width: firstInSelection.width, height: firstInSelection.height }, // 设置默认尺寸
+			});
+			if (!canvas) return;
+			// TODO: add edge for new nodes
+			// createEdgeForNode(canvas, firstInSelection, newNode);
+		}
+
+		if (below) {
+			const x = firstInSelection.x;
+			const y = firstInSelection.y + firstInSelection.height + gap.y;
+			_createTextNode(x, y);
+		} else {
+			const x = firstInSelection.x + firstInSelection.width + gap.x;
+			const y = firstInSelection.y;
+			_createTextNode(x, y);
+		}
 	}
 }
