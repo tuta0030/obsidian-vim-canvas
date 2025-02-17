@@ -1,6 +1,6 @@
 import { CanvasNode, Canvas  } from "obsidian";
 
-export const navigateNode = (lastNode: CanvasNode,canvas: Canvas, direction: "h" | "j" | "k" | "l") => {
+export const navigateNode = (canvas: Canvas, direction: "h" | "j" | "k" | "l", lastNode?: CanvasNode) => {
 	if (!canvas.getViewportNodes) return;
 	let lastNodeSet: Set<CanvasNode> = new Set();
 	if (lastNode) {

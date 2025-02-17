@@ -1,5 +1,5 @@
 import { error } from "console";
-import { App, Canvas} from "obsidian";
+import { App, Canvas, CanvasNode} from "obsidian";
 
 // get canvas
 // check if the current view is canvas
@@ -14,7 +14,7 @@ function isVimEnabled(app: App): boolean {
 // if current view is canvs and vim mode is enabled
 // start the vim canvas function
 // get canvas object
-export function getCanvas(app: App):Canvas | void {
+export function getCanvas(app: App): Canvas | void {
 	// console.log("Canvas status:",isCanvas(app));
 	// console.log("Vim status:",isVimEnabled(app));
 	if (isCanvas(app) && isVimEnabled(app)) {
