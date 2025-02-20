@@ -1,5 +1,5 @@
 import { error } from "console";
-import { App, Canvas, CanvasNode} from "obsidian";
+import { App, Canvas} from "obsidian";
 
 // get canvas
 // check if the current view is canvas

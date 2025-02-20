@@ -18,11 +18,11 @@ export default class VimCanvas extends Plugin {
 	private isAltPressed = false;
 
 	private getCurrentInfo() {
-		const canvas = getCanvas(this.app);
-		const canvasView = this.app.workspace.getActiveViewOfType(ItemView);
+		let canvas = getCanvas(this.app);
+		let canvasView = this.app.workspace.getActiveViewOfType(ItemView);
 		if (!canvas || !canvasView) {console.log("canvas not found");};
-		const getANodeInView = canvas?.getViewportNodes().values().next().value;
-		const currentNode = canvas?.selection.values().next().value;
+		let getANodeInView = canvas?.getViewportNodes().values().next().value;
+		let currentNode = canvas?.selection.values().next().value;
 		if (!currentNode) {console.log("current Node not found");}
 		const lastNode = this.lastNode;
 		if (!lastNode) { console.log("last Node is empty");}
@@ -48,7 +48,6 @@ export default class VimCanvas extends Plugin {
 	private handleKeyDown(e: KeyboardEvent) {
 		// alt + hjkl for continuous move
 		if (e.altKey && ["h", "j", "k", "l"].includes(e.key.toLowerCase())) {
-			if (this.isEditing()) return;
 			e.preventDefault();
 			this.isAltPressed = true;
 			this.currentNavKey = e.key.toLowerCase() as "h"|"j"|"k"|"l";
@@ -57,21 +56,25 @@ export default class VimCanvas extends Plugin {
 	}
 
 	private handleKeyUp(e: KeyboardEvent) {
-		if (this.isEditing()) return;
 		if (!e.altKey || ["h", "j", "k", "l"].includes(e.key.toLowerCase())) {
 			stopContinuousMove();
 		}
 	}
 
-	async onload() {
 
+	private handleAltMoveNodeKeyPress() {
 		this.registerDomEvent(
 			document,
 			"keydown",
 			this.handleKeyDown.bind(this)
 		);
 		this.registerDomEvent(document, "keyup", this.handleKeyUp.bind(this));
-		this.app.workspace.onLayoutReady(() => vimCommandPalette(this.app));
+	}
+
+	async onload() {
+
+		this.handleAltMoveNodeKeyPress();
+		vimCommandPalette(this.app);
 	}
 
 	onunload() {
