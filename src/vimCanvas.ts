@@ -10,9 +10,10 @@ import { addToHistory } from "./vimCanvasAddToHistory";
 
 export default class VimCanvas extends Plugin {
 	app: App;
-	private lastNode: CanvasNode[] = [];
+	private lastNodeList: CanvasNode[] = [];
 	private hjklList = ["h", "j", "k", "l"];
 	private refocusKey = ["r"];
+	private toggleEdit = " ";
 	private moveInterval?: number;
 	private isAltPressed = false;
 
@@ -22,9 +23,9 @@ export default class VimCanvas extends Plugin {
 		if (!canvas || !canvasView) {console.log("canvas not found");};
 		let getANodeInView = canvas?.getViewportNodes().values().next().value;
 		let currentNode = canvas?.selection.values().next().value;
-		if (!currentNode) {console.log("current Node not found");}
-		const lastNode = this.lastNode;
-		if (!lastNode) { console.log("last Node is empty");}
+		// if (!currentNode) {console.log("current Node not found");}
+		const lastNode = this.lastNodeList;
+		// if (!lastNode) { console.log("last Node is empty");}
 		const el = document.activeElement;
 		return {
 			canvas: canvas,
@@ -48,13 +49,24 @@ export default class VimCanvas extends Plugin {
 
 	private handleKeyDown(e: KeyboardEvent) {
 		const canvas = this.getCurrentInfo()?.canvas;
+		let currentNode = this.getCurrentInfo()?.currentNode;
 		let activeElement = this.getCurrentInfo()?.activeElement;
 		if (activeElement?.hasClass("prompt-input")) return;
+		// esc to deselect all
+		if (e.key === "Escape") {
+			e.preventDefault();
+			canvas?.deselectAll();
+		}
+		// toggle edit
+		if (e.key === this.toggleEdit && !this.isEditing()) {
+			e.preventDefault();
+			currentNode.startEditing();
+		}
 		// refocus
-		if (this.refocusKey.includes(e.key.toLowerCase())) {
+		if (this.refocusKey.includes(e.key.toLowerCase()) && canvas) {
 			e.preventDefault();
 			// console.log(this.getCurrentInfo());
-			refocusNode(this.app, true);
+			refocusNode(canvas, true, this.lastNodeList);
 		}
 		// alt + hjkl for continuous move
 		if (e.altKey && this.hjklList.includes(e.key.toLowerCase())) {
@@ -62,12 +74,24 @@ export default class VimCanvas extends Plugin {
 			this.isAltPressed = true;
 			startContinuousMove(this.app, e.key.toLowerCase() as "h"|"j"|"k"|"l");
 		}
+		// shift hjkl to add selected nodes
+		else if (e.shiftKey && this.hjklList.includes(e.key.toLowerCase())) {
+			e.preventDefault();
+			if (canvas && currentNode) {
+				let nextNode = navigateNode(canvas, e.key.toLowerCase() as "h"|"j"|"k"|"l", this.lastNodeList);
+				if (nextNode) {
+					addToHistory(nextNode, this.lastNodeList);
+					selectAndZoom(canvas, nextNode, false);
+				}
+			}
+		}
 		// hjkl for navigate node
 		else if (this.hjklList.includes(e.key.toLocaleLowerCase())) {
 			e.preventDefault();
-			if (canvas) {
+			if (canvas && currentNode) {
 				let nextNode = navigateNode(canvas, e.key.toLowerCase() as "h"|"j"|"k"|"l");
 				if (nextNode) {
+					addToHistory(nextNode, this.lastNodeList);
 					selectAndZoom(canvas, nextNode)
 				}
 			}
@@ -81,14 +105,14 @@ export default class VimCanvas extends Plugin {
 	}
 
 
-	private handleAltMoveNodeKeyPress() {
+	private handleVimCanvasKeyPress() {
 		this.registerDomEvent(document,"keydown",this.handleKeyDown.bind(this));
 		this.registerDomEvent(document, "keyup", this.handleKeyUp.bind(this));
 	}
 
 	async onload() {
-		this.handleAltMoveNodeKeyPress();
-		vimCommandPalette(this.app);
+		this.handleVimCanvasKeyPress();
+		vimCommandPalette(this.app); // TODO: add outline keys, accept ctrl n/ctrl p
 	}
 
 	onunload() {

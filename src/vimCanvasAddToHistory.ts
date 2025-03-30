@@ -6,7 +6,7 @@ export function addToHistory(currentNode: CanvasNode, lastNode: CanvasNode[]):Ca
         console.log("max history reached, make a shift...");
         lastNode.shift();
     }
-    console.log(`add ${currentNode} to history`);
+    // console.log(`add ${currentNode} to history`);
     
     lastNode.push(currentNode);
     return lastNode;

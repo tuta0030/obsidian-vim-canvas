@@ -1,20 +1,14 @@
 import { CanvasNode, Canvas  } from "obsidian";
 
-export const navigateNode = (canvas: Canvas, direction: "h" | "j" | "k" | "l", lastNode?: CanvasNode) => {
+export const navigateNode = (canvas: Canvas, direction: "h" | "j" | "k" | "l", lastNodeList: CanvasNode[]=[]) => {
 	if (!canvas.getViewportNodes) return;
-	let lastNodeSet: Set<CanvasNode> = new Set();
-	if (lastNode) {
-		lastNodeSet.add(lastNode);
-	}
-	let currentSelection = lastNode ? lastNodeSet : canvas.selection;
+	let currentSelection =canvas.selection;
 
 	// Check if the selected node is editing
 	if (currentSelection.values().next().value.isEditing) return;
 
-	const selectedItem =
-		currentSelection instanceof Set
-			? (currentSelection.values().next().value as CanvasNode)
-			: currentSelection;
+	// if we have lastNodeList, use it, otherwise use canvas.selection
+	const selectedItem = lastNodeList.length>0?lastNodeList[lastNodeList.length-1]:canvas.selection.values().next().value;
 	const allTheNodes = canvas.nodes;
 	const viewportNodes = canvas.getViewportNodes();
 
@@ -94,7 +88,6 @@ export const navigateNode = (canvas: Canvas, direction: "h" | "j" | "k" | "l", l
 	if (nodesWithin6Degrees.length > 0) {
 		nodesWithin6Degrees.sort((a, b) => a.distance - b.distance);
 		const nextNode = nodesWithin6Degrees[0].node;
-		lastNode = nextNode;
 		return nextNode;
 	}
 
@@ -105,7 +98,6 @@ export const navigateNode = (canvas: Canvas, direction: "h" | "j" | "k" | "l", l
 	if (nodesWithin60Degrees.length > 0) {
 		nodesWithin60Degrees.sort((a, b) => a.distance - b.distance);
 		const nextNode = nodesWithin60Degrees[0].node;
-		lastNode = nextNode;
 		return nextNode;
 	}
 };
