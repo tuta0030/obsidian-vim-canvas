@@ -48,9 +48,12 @@ export default class VimCanvas extends Plugin {
 	}
 
 	private handleKeyDown(e: KeyboardEvent) {
+		const key = e.key.toLowerCase();
 		const canvas = this.getCurrentInfo()?.canvas;
 		let currentNode = this.getCurrentInfo()?.currentNode;
 		let activeElement = this.getCurrentInfo()?.activeElement;
+
+		// ignore prompt input
 		if (activeElement?.hasClass("prompt-input")) return;
 		// esc to deselect all
 		if (e.key === "Escape") {
@@ -63,22 +66,23 @@ export default class VimCanvas extends Plugin {
 			currentNode.startEditing();
 		}
 		// refocus
-		if (this.refocusKey.includes(e.key.toLowerCase()) && canvas) {
+		if (this.refocusKey.includes(key) && canvas) {
 			e.preventDefault();
-			// console.log(this.getCurrentInfo());
 			refocusNode(canvas, true, this.lastNodeList);
 		}
+		// hjkl for navigate node
+		if (!this.hjklList.includes(key)) return; // return if not hjkl
 		// alt + hjkl for continuous move
-		if (e.altKey && this.hjklList.includes(e.key.toLowerCase())) {
+		if (e.altKey && this.hjklList.includes(key)) {
 			e.preventDefault();
 			this.isAltPressed = true;
-			startContinuousMove(this.app, e.key.toLowerCase() as "h"|"j"|"k"|"l");
+			startContinuousMove(this.app, key as "h"|"j"|"k"|"l");
 		}
 		// shift hjkl to add selected nodes
-		else if (e.shiftKey && this.hjklList.includes(e.key.toLowerCase())) {
+		else if (e.shiftKey && this.hjklList.includes(key)) {
 			e.preventDefault();
 			if (canvas && currentNode) {
-				let nextNode = navigateNode(canvas, e.key.toLowerCase() as "h"|"j"|"k"|"l", this.lastNodeList);
+				let nextNode = navigateNode(canvas, key as "h"|"j"|"k"|"l", this.lastNodeList);
 				if (nextNode) {
 					addToHistory(nextNode, this.lastNodeList);
 					selectAndZoom(canvas, nextNode, false);
@@ -86,10 +90,10 @@ export default class VimCanvas extends Plugin {
 			}
 		}
 		// hjkl for navigate node
-		else if (this.hjklList.includes(e.key.toLocaleLowerCase())) {
+		else if (this.hjklList.includes(key)) {
 			e.preventDefault();
 			if (canvas && currentNode) {
-				let nextNode = navigateNode(canvas, e.key.toLowerCase() as "h"|"j"|"k"|"l");
+				let nextNode = navigateNode(canvas, key as "h"|"j"|"k"|"l");
 				if (nextNode) {
 					addToHistory(nextNode, this.lastNodeList);
 					selectAndZoom(canvas, nextNode)
@@ -99,7 +103,8 @@ export default class VimCanvas extends Plugin {
 	}
 
 	private handleKeyUp(e: KeyboardEvent) {
-		if (!e.altKey || ["h", "j", "k", "l"].includes(e.key.toLowerCase())) {
+		const key = e.key.toLowerCase();
+		if (!e.altKey || ["h", "j", "k", "l"].includes(key)) {
 			stopContinuousMove();
 		}
 	}
