@@ -14,6 +14,9 @@ export default class VimCanvas extends Plugin {
 	private hjklList = ["h", "j", "k", "l"];
 	private refocusKey = ["r"];
 	private toggleEdit = " ";
+	private createRight = ["enter"];
+	private createDown = ["tab"];
+	private deleteNode = ["x"];
 	private moveInterval?: number;
 	private isAltPressed = false;
 
@@ -64,6 +67,21 @@ export default class VimCanvas extends Plugin {
 		if (e.key === this.toggleEdit && !this.isEditing()) {
 			e.preventDefault();
 			currentNode.startEditing();
+		}
+		// create node
+		if (this.createRight.includes(key) && canvas) {
+			e.preventDefault();
+			createNode(this.app, this.lastNodeList, false);
+		}
+		if (this.createDown.includes(key) && canvas) {
+			e.preventDefault();
+			createNode(this.app, this.lastNodeList, true);
+		}
+		// delete node
+		if (this.deleteNode.includes(key) && canvas) {
+			e.preventDefault();
+			// @ts-ignore
+			canvas.deleteSelection();
 		}
 		// refocus
 		if (this.refocusKey.includes(key) && canvas) {
