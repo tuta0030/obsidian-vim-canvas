@@ -17,8 +17,10 @@ export default class VimCanvas extends Plugin {
 	private createRight = ["enter"];
 	private createDown = ["tab"];
 	private deleteNode = ["x"];
-	private moveInterval?: number;
-	private isAltPressed = false;
+	private zoomStep = 1;
+	private scaleKey = "s";
+	private scaleStep = 20;
+	// private isAltPressed = false;
 
 	private getCurrentInfo() {
 		let canvas = getCanvas(this.app);
@@ -59,9 +61,24 @@ export default class VimCanvas extends Plugin {
 		// ignore prompt input
 		if (activeElement?.hasClass("prompt-input")) return;
 		// esc to deselect all
-		if (e.key === "Escape") {
+		if (e.key === "Escape" && currentNode) {
 			e.preventDefault();
 			canvas?.deselectAll();
+		}
+		// increase node height
+		if (e.shiftKey && this.scaleKey.includes(key) && canvas) {
+			currentNode.height += this.scaleStep;	
+			currentNode.render();
+		}
+		if (e.altKey && this.scaleKey.includes(key) && canvas) {
+			currentNode.height += -this.scaleStep;
+			currentNode.render();
+		}
+		// zoom in and out
+		if (e.shiftKey && "z".includes(key) && canvas) {
+			e.preventDefault();
+			// @ts-ignore
+			canvas.zoomBy(-this.zoomStep);
 		}
 		// toggle edit
 		if (e.key === this.toggleEdit && !this.isEditing()) {
@@ -71,11 +88,11 @@ export default class VimCanvas extends Plugin {
 		// create node
 		if (this.createRight.includes(key) && canvas) {
 			e.preventDefault();
-			createNode(this.app, this.lastNodeList, false);
+			createNode(this.app, this.lastNodeList, true);
 		}
 		if (this.createDown.includes(key) && canvas) {
 			e.preventDefault();
-			createNode(this.app, this.lastNodeList, true);
+			createNode(this.app, this.lastNodeList, false);
 		}
 		// delete node
 		if (this.deleteNode.includes(key) && canvas) {
@@ -93,7 +110,6 @@ export default class VimCanvas extends Plugin {
 		// alt + hjkl for continuous move
 		if (e.altKey && this.hjklList.includes(key)) {
 			e.preventDefault();
-			this.isAltPressed = true;
 			startContinuousMove(this.app, key as "h"|"j"|"k"|"l");
 		}
 		// shift hjkl to add selected nodes
