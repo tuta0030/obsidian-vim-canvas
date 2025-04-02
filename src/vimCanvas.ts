@@ -20,12 +20,14 @@ export default class VimCanvas extends Plugin {
 	private zoomStep = 1;
 	private scaleKey = "s";
 	private scaleStep = 20;
+	private lastZPressTime = 0;
+	private keyPressThreshold = 300;
 	// private isAltPressed = false;
 
 	private getCurrentInfo() {
 		let canvas = getCanvas(this.app);
 		let canvasView = this.app.workspace.getActiveViewOfType(ItemView);
-		if (!canvas || !canvasView) {console.log("canvas not found");};
+		// if (!canvas || !canvasView) {console.log("canvas not found");};
 		let getANodeInView = canvas?.getViewportNodes().values().next().value;
 		let currentNode = canvas?.selection.values().next().value;
 		// if (!currentNode) {console.log("current Node not found");}
@@ -58,6 +60,7 @@ export default class VimCanvas extends Plugin {
 		let currentNode = this.getCurrentInfo()?.currentNode;
 		let activeElement = this.getCurrentInfo()?.activeElement;
 
+		if (!canvas) return;
 		// ignore prompt input
 		if (activeElement?.hasClass("prompt-input")) return;
 		// esc to deselect all
@@ -65,17 +68,35 @@ export default class VimCanvas extends Plugin {
 			e.preventDefault();
 			canvas?.deselectAll();
 		}
+		// double click z to zoom to selected node
+		if (e.key === "z") {
+			 const currentTime = Date.now();
+				if (currentTime - this.lastZPressTime <= this.keyPressThreshold) {
+					// 300ms threshold
+					e.preventDefault();
+					selectAndZoom(canvas, currentNode, true, true);
+					this.lastZPressTime = 0; // Reset after detecting double-tap
+				} else {
+					this.lastZPressTime = currentTime;
+					// Reset timer if no second press within 300ms
+					setTimeout(() => {
+						if (this.lastZPressTime === currentTime) {
+							this.lastZPressTime = 0;
+						}
+					}, this.keyPressThreshold);
+				}
+		}
 		// increase node height
-		if (e.shiftKey && this.scaleKey.includes(key) && canvas) {
+		if (e.shiftKey && this.scaleKey.includes(key)) {
 			currentNode.height += this.scaleStep;	
 			currentNode.render();
 		}
-		if (e.altKey && this.scaleKey.includes(key) && canvas) {
+		if (e.altKey && this.scaleKey.includes(key)) {
 			currentNode.height += -this.scaleStep;
 			currentNode.render();
 		}
 		// zoom in and out
-		if (e.shiftKey && "z".includes(key) && canvas) {
+		if (e.shiftKey && "z".includes(key)) {
 			e.preventDefault();
 			// @ts-ignore
 			canvas.zoomBy(-this.zoomStep);
@@ -86,22 +107,22 @@ export default class VimCanvas extends Plugin {
 			currentNode.startEditing();
 		}
 		// create node
-		if (this.createRight.includes(key) && canvas) {
+		if (this.createRight.includes(key)) {
 			e.preventDefault();
 			createNode(this.app, this.lastNodeList, true);
 		}
-		if (this.createDown.includes(key) && canvas) {
+		if (this.createDown.includes(key)) {
 			e.preventDefault();
 			createNode(this.app, this.lastNodeList, false);
 		}
 		// delete node
-		if (this.deleteNode.includes(key) && canvas) {
+		if (this.deleteNode.includes(key)) {
 			e.preventDefault();
 			// @ts-ignore
 			canvas.deleteSelection();
 		}
 		// refocus
-		if (this.refocusKey.includes(key) && canvas) {
+		if (this.refocusKey.includes(key)) {
 			e.preventDefault();
 			refocusNode(canvas, true, this.lastNodeList);
 		}
@@ -130,7 +151,7 @@ export default class VimCanvas extends Plugin {
 				let nextNode = navigateNode(canvas, key as "h"|"j"|"k"|"l");
 				if (nextNode) {
 					addToHistory(nextNode, this.lastNodeList);
-					selectAndZoom(canvas, nextNode)
+					selectAndZoom(canvas, nextNode, true, false)
 				}
 			}
 		}

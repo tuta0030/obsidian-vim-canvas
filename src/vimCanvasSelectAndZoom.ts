@@ -1,6 +1,6 @@
 import {Canvas, CanvasNode} from "obsidian";
 
-export async function selectAndZoom(canvas: Canvas, node: CanvasNode, deselect = true) {
+export async function selectAndZoom(canvas: Canvas, node: CanvasNode, deselect = true, zoom = true) {
 	deselect && canvas.deselectAll();
 
 	// 等待节点完成初始化
@@ -19,7 +19,7 @@ export async function selectAndZoom(canvas: Canvas, node: CanvasNode, deselect =
 
 	// 安全缩放
 	try {
-		canvas.zoomToSelection();
+		if (zoom) canvas.zoomToSelection();
 	} catch (e) {
 		console.warn("Zoom failed, fallback to frame", e);
 		canvas.requestFrame();
