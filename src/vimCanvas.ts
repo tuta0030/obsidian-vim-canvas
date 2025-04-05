@@ -1,4 +1,4 @@
-import { App, Plugin, Canvas, CanvasNode, Modifier, ItemView, Scope } from "obsidian";
+import { App, Plugin, CanvasNode, ItemView, PluginSettingTab, Setting } from "obsidian";
 import { vimCommandPalette } from "./vimCommandPalette";
 import { createNode } from "./vimCanvasCreateNode";
 import { refocusNode } from "./vimCanvasReFocusNode";
@@ -7,14 +7,17 @@ import { getCanvas } from "./vimCanvasGetCanvas";
 import { startContinuousMove, stopContinuousMove } from "./vimCanvasMoveNodes";
 import { selectAndZoom } from "./vimCanvasSelectAndZoom";
 import { addToHistory } from "./vimCanvasAddToHistory";
+import {VimCanvasSettingTab} from "./vimCanvasSettingTab"
+
+
 
 interface PluginSettings {
     hjklList: string[];
-    refocusKey: string[];
+    refocusKey: string;
     toggleEditKey: string;
-	createRight: string[];
-    createDown: string[];
-    deleteNode: string[];
+	createRight: string;
+    createDown: string;
+    deleteNode: string;
     zoomStep: number;
     scaleStep: number;
     keyPressThreshold: number;
@@ -28,22 +31,21 @@ interface PluginSettings {
 export default class VimCanvas extends Plugin {
 	app: App;
 	private lastNodeList: CanvasNode[] = [];
-	private settings: PluginSettings = {
-		createRight: ["enter"],
+	public settings: PluginSettings = {
+		createRight: "enter",
 		hjklList: ["h", "j", "k", "l"],
 		toggleEdit: " ",
 		lastZPressTime: 0,
-		refocusKey: ["r"],
+		refocusKey: "r",
 		toggleEditKey: " ",
-		createDown: ["tab"],
-		deleteNode: ["x"],
+		createDown: "tab",
+		deleteNode: "x",
 		scaleKey: "s",
 		zoomStep: 1,
 		scaleStep: 20,
 		keyPressThreshold: 300,
 		isNavZoom: true,
 	};
-
 	private getCurrentInfo() {
 		let canvas = getCanvas(this.app);
 		let canvasView = this.app.workspace.getActiveViewOfType(ItemView);
@@ -73,15 +75,17 @@ export default class VimCanvas extends Plugin {
 		return currentNode.isEditing;
 	}
 
-	private handleKeyDown(e: KeyboardEvent) {
+	private async handleKeyDown(e: KeyboardEvent) {
 		const key = e.key.toLowerCase();
 		const canvas = this.getCurrentInfo()?.canvas;
 		let currentNode = this.getCurrentInfo()?.currentNode;
 		let activeElement = this.getCurrentInfo()?.activeElement;
 
 		if (!canvas) return;
-		// ignore prompt input
+		// if command palette is opened, ignore the key press 
 		if (activeElement?.hasClass("prompt-input")) return;
+		// @ts-ignore if settings tab is opened, ignore the key press
+		if (this.app.setting.activeTab) return;
 		// esc to deselect all
 		if (e.key === "Escape" && currentNode) {
 			e.preventDefault();
@@ -89,6 +93,8 @@ export default class VimCanvas extends Plugin {
 		}
 		// double click z to zoom to selected node
 		if (e.key === "z") {
+			// if no node selected, return
+			if (canvas.selection.size == 0) return;
 			const currentTime = Date.now();
 			if (
 				currentTime - this.settings.lastZPressTime <=
@@ -121,7 +127,7 @@ export default class VimCanvas extends Plugin {
 		if (e.shiftKey && "z".includes(key)) {
 			e.preventDefault();
 			// @ts-ignore
-			canvas.zoomBy(-this.zoomStep);
+			canvas.zoomBy(-this.settings.zoomStep);
 		}
 		// toggle edit
 		if (e.key === this.settings.toggleEdit && !this.isEditing()) {
@@ -131,17 +137,29 @@ export default class VimCanvas extends Plugin {
 		// create node
 		if (this.settings.createRight.includes(key)) {
 			e.preventDefault();
-			createNode(this.app, this.lastNodeList, true);
+			const _createdNode = createNode(this.app, this.lastNodeList, true);
+			if (_createdNode) {
+				addToHistory(await _createdNode, this.lastNodeList);
+				selectAndZoom(canvas, await _createdNode, true, this.settings.isNavZoom);
+			}
 		}
 		if (this.settings.createDown.includes(key)) {
 			e.preventDefault();
-			createNode(this.app, this.lastNodeList, false);
+			const _createdNode = createNode(this.app, this.lastNodeList, false);
+			if (_createdNode) {
+				addToHistory(await _createdNode, this.lastNodeList);
+				selectAndZoom(canvas, await _createdNode, true, this.settings.isNavZoom);
+			}
 		}
 		// delete node
 		if (this.settings.deleteNode.includes(key)) {
 			e.preventDefault();
 			// @ts-ignore
 			canvas.deleteSelection();
+			canvas.selection.forEach((node) => {
+				this.lastNodeList.remove(node);
+			});
+			selectAndZoom(canvas, this.lastNodeList[this.lastNodeList.length - 1], true, true);
 		}
 		// refocus
 		if (this.settings.refocusKey.includes(key)) {
@@ -206,6 +224,8 @@ export default class VimCanvas extends Plugin {
 		await this.loadSettings();
 		this.handleVimCanvasKeyPress();
 		vimCommandPalette(this.app);
+
+		this.addSettingTab(new VimCanvasSettingTab(this.app, this));
 	}
 
 	async loadSettings() {
