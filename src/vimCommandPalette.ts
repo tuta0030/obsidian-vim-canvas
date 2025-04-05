@@ -1,21 +1,14 @@
-import { log } from "console";
 import { App } from "obsidian";
 
 export const vimCommandPalette = (app: App) => {
 	console.log("Load vimCommandPalette");
 	document.addEventListener("keydown", (e) => {
-		const isKeyRelevantValues = isKeyRelevant(
-			e,
-			// TODO: use getLeaf instead of activeLeaf
-			//@ts-ignore
-			app.workspace.activeLeaf?.getViewState().title == "Search",
-			//@ts-ignore
-			app.workspace.editorSuggest.currentSuggest
-		);
+		const isKeyRelevantValues = isKeyRelevant(e, app);
 		if (isKeyRelevantValues) {
 			const key = isKeyRelevantValues.key;
-			// console.log(key);
+			// if match the key, dispatch the arrow down event
 			switch (key) {
+				case "n":
 				case "j":
 					e.preventDefault();
 					document.dispatchEvent(
@@ -25,6 +18,7 @@ export const vimCommandPalette = (app: App) => {
 						})
 					);
 					break;
+				case "p":
 				case "k":
 					e.preventDefault();
 					document.dispatchEvent(
@@ -39,11 +33,7 @@ export const vimCommandPalette = (app: App) => {
 	});
 };
 
-function isKeyRelevant(
-	event: KeyboardEvent,
-	isSearching: boolean,
-	isSuggesting: boolean
-) {
+function isKeyRelevant(event: KeyboardEvent, app: App): KeyboardEvent | false | undefined {
 	if (!document.activeElement || !event.ctrlKey) {
 		return false;
 	}
@@ -52,11 +42,22 @@ function isKeyRelevant(
 	const isInOmniSearch = el.closest(".omnisearch-modal");
 	const isInAutoCompleteFile = el.closest(".cm-content");
 	// The OmniSearch plugin already maps Ctrl-J and Ctrl-K
-	return (
+
+	// check all the conditions here
+	if (
 		(!isInOmniSearch && el.hasClass("prompt-input")) ||
-			isInAutoCompleteFile ||
-			isSearching ||
-			isSuggesting,
-		event
-	);
+		isInAutoCompleteFile ||
+		// @ts-ignore
+		app.workspace.editorSuggest.currentSuggest ||
+		app.workspace.activeLeaf?.getViewState().type == "search" ||
+		app.workspace.activeLeaf?.getViewState().type == "outline"||
+		app.workspace.activeLeaf?.getViewState().type == "file-explorer" ||
+		app.workspace.activeLeaf?.getViewState().type == "backlink"||
+		app.workspace.activeLeaf?.getViewState().type == "outgoing-link"||
+		app.workspace.activeLeaf?.getViewState().type == "tag"||
+		app.workspace.activeLeaf?.getViewState().type == "bookmarks"
+
+	) {
+		return event;
+	}
 }

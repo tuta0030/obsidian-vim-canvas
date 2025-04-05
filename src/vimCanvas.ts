@@ -28,18 +28,6 @@ interface PluginSettings {
 export default class VimCanvas extends Plugin {
 	app: App;
 	private lastNodeList: CanvasNode[] = [];
-	// private hjklList = ["h", "j", "k", "l"];
-	// private refocusKey = ["r"];
-	// private toggleEdit = " ";
-	// private createRight = ["enter"];
-	// private createDown = ["tab"];
-	// private deleteNode = ["x"];
-	// private zoomStep = 1;
-	// private scaleKey = "s";
-	// private scaleStep = 20;
-	// private lastZPressTime = 0;
-	// private keyPressThreshold = 300;
-	// private isNavZoom = true;
 	private settings: PluginSettings = {
 		createRight: ["enter"],
 		hjklList: ["h", "j", "k", "l"],
@@ -217,7 +205,7 @@ export default class VimCanvas extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		this.handleVimCanvasKeyPress();
-		vimCommandPalette(this.app); // TODO: add outline keys, accept ctrl n/ctrl p
+		vimCommandPalette(this.app);
 	}
 
 	async loadSettings() {
