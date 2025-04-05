@@ -94,8 +94,8 @@ export async function createNode(
 
 	// 处理其他情况
 	if (currentSelection.size === 0 && allNodes.size !== 0) {
-		console.warn("No nodes selected but there are existing nodes.");
-		return null;
+		console.warn("No nodes selected but there are existing nodes. select from viewport");
+		return canvas.getViewportNodes().last();
 	}
 
 	return null;
