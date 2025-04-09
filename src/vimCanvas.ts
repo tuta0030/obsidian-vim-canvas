@@ -9,10 +9,9 @@ import { selectAndZoom } from "./vimCanvasSelectAndZoom";
 import { addToHistory } from "./vimCanvasAddToHistory";
 import {VimCanvasSettingTab} from "./vimCanvasSettingTab"
 
-// FIXME key conflict when rename canvas file no matter in canvas or file explore
-// FIXME after delete node, should be automatically refocus on last node, not the deleted node
-// FIXME after esc back from edit mode, can't use hjkl to navigate node, must deselect and refocus
-// TODO new node should be evenly distrubute
+// FIXME: after delete node, should be automatically refocus on last node, not the deleted node
+// FIXME: after esc back from edit mode, can't use hjkl to navigate node, must deselect and refocus
+// TODO: new node should be evenly distrubute
 
 
 interface PluginSettings {
@@ -84,10 +83,14 @@ export default class VimCanvas extends Plugin {
 		const canvas = this.getCurrentInfo()?.canvas;
 		let currentNode = this.getCurrentInfo()?.currentNode;
 		let activeElement = this.getCurrentInfo()?.activeElement;
+		let titleBarElements = document.getElementsByClassName("view-header-title");
 
 		if (!canvas) return;
 		// if command palette is opened, ignore the key press 
 		if (activeElement?.hasClass("prompt-input")) return;
+		if (activeElement?.hasClass("view-header-title")) return;
+		if (activeElement?.hasClass("tree-item nav-file")) return;
+		
 		// @ts-ignore if settings tab is opened, ignore the key press
 		if (this.app.setting.activeTab) return;
 		// esc to deselect all
