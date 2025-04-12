@@ -8,6 +8,10 @@ export function addToHistory(currentNode: CanvasNode, lastNode: CanvasNode[]):Ca
     }
     // console.log(`add ${currentNode} to history`);
     
+    // if (lastNode.includes(currentNode)) {
+    //     console.log(`${currentNode} already in history`);
+    // }
+
     lastNode.push(currentNode);
     return lastNode;
 }

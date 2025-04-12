@@ -8,8 +8,8 @@ import { startContinuousMove, stopContinuousMove } from "./vimCanvasMoveNodes";
 import { selectAndZoom } from "./vimCanvasSelectAndZoom";
 import { addToHistory } from "./vimCanvasAddToHistory";
 import {VimCanvasSettingTab} from "./vimCanvasSettingTab"
+import { random } from "./vimCanvasRandomId";
 
-// FIXME: after delete node, should be automatically refocus on last node, not the deleted node
 // FIXME: after esc back from edit mode, can't use hjkl to navigate node, must deselect and refocus
 // TODO: new node should be evenly distrubute
 
@@ -35,13 +35,13 @@ export default class VimCanvas extends Plugin {
 	app: App;
 	private lastNodeList: CanvasNode[] = [];
 	public settings: PluginSettings = {
-		createRight: "enter",
+		createRight: "tab",
 		hjklList: ["h", "j", "k", "l"],
 		toggleEdit: " ",
 		lastZPressTime: 0,
 		refocusKey: "r",
 		toggleEditKey: " ",
-		createDown: "tab",
+		createDown: "enter",
 		deleteNode: "x",
 		scaleKey: "s",
 		zoomStep: 1,
@@ -56,14 +56,14 @@ export default class VimCanvas extends Plugin {
 		let getANodeInView = canvas?.getViewportNodes().values().next().value;
 		let currentNode = canvas?.selection.values().next().value;
 		// if (!currentNode) {console.log("current Node not found");}
-		const lastNode = this.lastNodeList;
+		const lastNodeList = this.lastNodeList;
 		// if (!lastNode) { console.log("last Node is empty");}
 		const el = document.activeElement;
 		return {
 			canvas: canvas,
 			canvasView: canvasView,
 			currentNode: currentNode,
-			lastNode: lastNode,
+			lastNode: lastNodeList,
 			aNode: getANodeInView,
 			activeElement: el,
 		};
@@ -82,7 +82,9 @@ export default class VimCanvas extends Plugin {
 		const key = e.key.toLowerCase();
 		const canvas = this.getCurrentInfo()?.canvas;
 		let currentNode = this.getCurrentInfo()?.currentNode;
+		let aNode = this.getCurrentInfo()?.aNode;
 		let activeElement = this.getCurrentInfo()?.activeElement;
+		let lastOfNodeList = this.lastNodeList[this.lastNodeList.length - 1];
 		let titleBarElements = document.getElementsByClassName("view-header-title");
 
 		if (!canvas) return;
@@ -144,7 +146,15 @@ export default class VimCanvas extends Plugin {
 		// create node
 		if (this.settings.createRight.includes(key)) {
 			e.preventDefault();
-			const _createdNode = createNode(this.app, this.lastNodeList, true);
+			const _createdNode = createNode(
+				this.app,
+				canvas,
+				this.lastNodeList,
+				currentNode,
+				random(16),
+				"text",
+				"right"
+			);
 			if (_createdNode) {
 				addToHistory(await _createdNode, this.lastNodeList);
 				selectAndZoom(canvas, await _createdNode, true, this.settings.isNavZoom);
@@ -152,7 +162,15 @@ export default class VimCanvas extends Plugin {
 		}
 		if (this.settings.createDown.includes(key)) {
 			e.preventDefault();
-			const _createdNode = createNode(this.app, this.lastNodeList, false);
+			const _createdNode = createNode(
+				this.app,
+				canvas,
+				this.lastNodeList,
+				currentNode,
+				random(16),
+				"text",
+				"down"
+			);
 			if (_createdNode) {
 				addToHistory(await _createdNode, this.lastNodeList);
 				selectAndZoom(canvas, await _createdNode, true, this.settings.isNavZoom);
@@ -166,7 +184,11 @@ export default class VimCanvas extends Plugin {
 			canvas.selection.forEach((node) => {
 				this.lastNodeList.remove(node);
 			});
-			selectAndZoom(canvas, this.lastNodeList[this.lastNodeList.length - 1], true, true);
+			if (this.lastNodeList[this.lastNodeList.length - 2]) {
+				selectAndZoom(canvas, this.lastNodeList[this.lastNodeList.length - 2], true, true);
+			} else {
+				selectAndZoom(canvas, aNode, true, true);
+			}
 		}
 		// refocus
 		if (this.settings.refocusKey.includes(key)) {
